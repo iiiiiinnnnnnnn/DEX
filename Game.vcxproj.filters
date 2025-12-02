@@ -54,6 +54,9 @@
     <ClInclude Include="Source\ImGuiRenderer.h">
       <Filter>Source</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Graphics.h">
+      <Filter>Source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Framework.cpp">
@@ -81,6 +84,9 @@
       <Filter>External\imgui-docking</Filter>
     </ClCompile>
     <ClCompile Include="Source\ImGuiRenderer.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Graphics.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>

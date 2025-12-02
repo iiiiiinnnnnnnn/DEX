@@ -125,7 +125,9 @@
     <ClInclude Include="External\imgui-docking\imstb_rectpack.h" />
     <ClInclude Include="External\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="External\imgui-docking\imstb_truetype.h" />
+    <ClInclude Include="Source\FrameBuffer.h" />
     <ClInclude Include="Source\Framework.h" />
+    <ClInclude Include="Source\Graphics.h" />
     <ClInclude Include="Source\HighResolutionTimer.h" />
     <ClInclude Include="Source\ImGuiRenderer.h" />
     <ClInclude Include="Source\Misc.h" />
@@ -137,7 +139,9 @@
     <ClCompile Include="External\imgui-docking\imgui_impl_dx11.cpp" />
     <ClCompile Include="External\imgui-docking\imgui_impl_win32.cpp" />
     <ClCompile Include="External\imgui-docking\imgui_widgets.cpp" />
+    <ClCompile Include="Source\FrameBuffer.cpp" />
     <ClCompile Include="Source\Framework.cpp" />
+    <ClCompile Include="Source\Graphics.cpp" />
     <ClCompile Include="Source\ImGuiRenderer.cpp" />
     <ClCompile Include="Source\Main.cpp" />
   </ItemGroup>

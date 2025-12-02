@@ -2,6 +2,10 @@
 #include <sstream>
 
 #include "Framework.h"
+#include "Graphics.h"
+
+#include <imgui.h>
+#include "ImGuiRenderer.h"
 
 // 垂直同期間隔設定
 static const int syncInterval = 0;
@@ -10,11 +14,18 @@ static const int syncInterval = 0;
 Framework::Framework(HWND hWnd)
 	: hWnd(hWnd)
 {
+	// グラフィックス初期化
+	Graphics::Instance().Initialize(hWnd);
+
+	// IMGUI初期化
+	ImGuiRenderer::Initialize(hWnd, Graphics::Instance().GetDevice(), Graphics::Instance().GetDeviceContext());
 }
 
 // デストラクタ
 Framework::~Framework()
 {
+	// IMGUI終了化
+	ImGuiRenderer::Finalize();
 }
 
 // 更新処理
@@ -25,6 +36,33 @@ void Framework::Update(float elapsedTime)
 // 描画処理
 void Framework::Render(float elapsedTime)
 {
+	ID3D11DeviceContext* dc = Graphics::Instance().GetDeviceContext();
+
+	// IMGUIフレーム開始処理
+	ImGuiRenderer::NewFrame();
+
+	// 画面クリア
+	Graphics::Instance().GetFrameBuffer()->Clear(dc, 0, 0, 1, 1);
+
+	// レンダーターゲット設定
+	Graphics::Instance().GetFrameBuffer()->SetRenderTargets(dc);
+
+#if 1
+	// IMGUIデモウインドウ描画（IMGUI機能テスト用）
+	ImGui::ShowDemoWindow();
+#endif
+
+	// IMGUI描画
+	ImGuiRenderer::Render(dc);
+
+	// 画面表示
+	/* 画面を表示する際にフレームの同期をとる
+		0:可変フレームレート
+		1 : 60FPS
+		2 : 30FPS
+		3 : 20FPS
+		4 : 15FPS */
+	Graphics::Instance().Present(syncInterval);
 }
 
 // フレームレート計算
@@ -85,6 +123,9 @@ int Framework::Run()
 // メッセージハンドラ
 LRESULT CALLBACK Framework::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGuiRenderer::HandleMessage(hWnd, msg, wParam, lParam))
+		return true;
+
 	switch (msg)
 	{
 	case WM_PAINT:
