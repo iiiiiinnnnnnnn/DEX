@@ -119,13 +119,16 @@
     <ClInclude Include="External\imgui-docking\imstb_rectpack.h" />
     <ClInclude Include="External\imgui-docking\imstb_textedit.h" />
     <ClInclude Include="External\imgui-docking\imstb_truetype.h" />
+    <ClInclude Include="Source\Camera.h" />
     <ClInclude Include="Source\FrameBuffer.h" />
     <ClInclude Include="Source\Framework.h" />
+    <ClInclude Include="Source\Gizmos.h" />
     <ClInclude Include="Source\GpuResourceUtils.h" />
     <ClInclude Include="Source\Graphics.h" />
     <ClInclude Include="Source\HighResolutionTimer.h" />
     <ClInclude Include="Source\ImGuiRenderer.h" />
     <ClInclude Include="Source\Misc.h" />
+    <ClInclude Include="Source\RenderContext.h" />
     <ClInclude Include="Source\RenderState.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\Sprite.h" />
@@ -137,8 +140,10 @@
     <ClCompile Include="External\imgui-docking\imgui_impl_dx11.cpp" />
     <ClCompile Include="External\imgui-docking\imgui_impl_win32.cpp" />
     <ClCompile Include="External\imgui-docking\imgui_widgets.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\FrameBuffer.cpp" />
     <ClCompile Include="Source\Framework.cpp" />
+    <ClCompile Include="Source\Gizmos.cpp" />
     <ClCompile Include="Source\GpuResourceUtils.cpp" />
     <ClCompile Include="Source\Graphics.cpp" />
     <ClCompile Include="Source\ImGuiRenderer.cpp" />
@@ -148,6 +153,14 @@
     <ClCompile Include="Source\Sprite.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="Shader\GizmosPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shader\GizmosVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
     <FxCompile Include="Shader\SpritePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
@@ -159,6 +172,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Shader\Gizmos.hlsli" />
     <None Include="Shader\Sprite.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

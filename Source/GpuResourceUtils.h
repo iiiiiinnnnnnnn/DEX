@@ -34,4 +34,10 @@ public:
 		UINT color,
 		ID3D11ShaderResourceView** shaderResourceView,
 		D3D11_TEXTURE2D_DESC* texture2dDesc = nullptr);
+
+	// 定数バッファ作成
+	static HRESULT CreateConstantBuffer(
+		ID3D11Device* device,
+		UINT bufferSize,
+		ID3D11Buffer** constantBuffer);
 };

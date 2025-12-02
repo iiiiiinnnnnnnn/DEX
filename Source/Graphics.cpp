@@ -12,6 +12,7 @@ void Graphics::Initialize(HWND hWnd)
 	this->screenWidth = static_cast<float>(screenWidth);
 	this->screenHeight = static_cast<float>(screenHeight);
 	HRESULT hr = S_OK;
+
 	// デバイス＆スワップチェーンの生成
 	{
 		UINT createDeviceFlags = 0;
@@ -70,6 +71,9 @@ void Graphics::Initialize(HWND hWnd)
 
 	// レンダーステート生成
 	renderState = std::make_unique<RenderState>(device.Get());
+
+	// ギズモ生成
+	gizmos = std::make_unique<Gizmos>(device.Get());
 }
 
 // 画面表示

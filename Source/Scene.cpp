@@ -157,3 +157,54 @@ void RasterizeTestScene::Render(float elapsedTime)
 	sprite->Render(dc, 500, 50, 0.0f, 100, 100, 0, 1, 0, 0, 1);
 	sprite->Render(dc, 600, 200, 0.0f, -100, 100, 0, 1, 0, 0, 1);
 }
+
+
+// コンストラクタ
+GizmosTestScene::GizmosTestScene()
+{
+	float screenWidth = Graphics::Instance().GetScreenWidth();
+	float screenHeight = Graphics::Instance().GetScreenHeight();
+	// カメラ設定
+	camera.SetPerspectiveFov(
+		DirectX::XMConvertToRadians(45), // 画角
+		screenWidth / screenHeight, // 画面アスペクト比
+		0.1f, // ニアクリップ
+		1000.0f // ファークリップ
+	);
+	camera.SetLookAt(
+		{ 0, 1, -5 }, // 視点
+		{ 0, 0, 0 }, // 注視点
+		{ 0, 1, 0 } // 上ベクトル
+	);
+}
+
+// 描画処理
+void GizmosTestScene::Render(float elapsedTime)
+{
+	Gizmos* gizmos = Graphics::Instance().GetGizmos();
+
+	// 回転処理
+	rotation += 0.5f * elapsedTime;
+
+	// 箱描画
+	gizmos->DrawBox(
+		{ 0, 0, 0 }, // 位置
+		{ 0, rotation, 0 }, // 回転
+		{ 1, 1, 1 }, // サイズ
+		{ 1, 1, 1, 1 }); // 色
+
+	// 球描画
+	gizmos->DrawSphere(
+		{ 2, 0, 0 }, // 位置
+		1.0f, // 半径
+		{ 1, 0, 0, 1 }); // 色
+
+	// 描画コンテキスト設定
+	RenderContext rc;
+	rc.camera = &camera;
+	rc.deviceContext = Graphics::Instance().GetDeviceContext();
+	rc.renderState = Graphics::Instance().GetRenderState();
+
+	// 描画実行
+	gizmos->Render(rc);
+}

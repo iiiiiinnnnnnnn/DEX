@@ -6,6 +6,7 @@
 
 #include "FrameBuffer.h"
 #include "RenderState.h"
+#include "Gizmos.h"
 
 // グラフィックス
 class Graphics
@@ -46,6 +47,9 @@ public:
 	// レンダーステート取得
 	RenderState* GetRenderState() { return renderState.get(); }
 
+	// ギズモ取得
+	Gizmos* GetGizmos() { return gizmos.get(); }
+
 private:
 	// ComPtr で DirectX のオブジェクトをスマートポインタとして扱う。
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -54,6 +58,7 @@ private:
 
 	std::unique_ptr<FrameBuffer> frameBuffer;
 	std::unique_ptr<RenderState> renderState;
+	std::unique_ptr<Gizmos> gizmos;
 
 	float screenWidth;
 	float screenHeight;

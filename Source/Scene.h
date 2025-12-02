@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "Sprite.h"
+#include "Camera.h"
 
 // シーン基底
 class Scene
@@ -65,4 +66,17 @@ public:
 	void Render(float elapsedTime) override;
 private:
 	std::unique_ptr<Sprite> sprite;
+};
+
+// ギズモテストシーン
+class GizmosTestScene : public Scene
+{
+public:
+	GizmosTestScene();
+	~GizmosTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	Camera camera;
+	float rotation = 0;
 };

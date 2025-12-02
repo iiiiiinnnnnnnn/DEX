@@ -164,3 +164,21 @@ HRESULT GpuResourceUtils::CreateDummyTexture(
 	}
 	return hr;
 }
+
+// 定数バッファ作成
+HRESULT GpuResourceUtils::CreateConstantBuffer(
+	ID3D11Device* device,
+	UINT bufferSize,
+	ID3D11Buffer** constantBuffer)
+{
+	D3D11_BUFFER_DESC desc{};
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	desc.ByteWidth = bufferSize;
+	desc.StructureByteStride = 0;
+	HRESULT hr = device->CreateBuffer(&desc, 0, constantBuffer);
+	_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+	return hr;
+}

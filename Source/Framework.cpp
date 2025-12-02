@@ -24,7 +24,8 @@ Framework::Framework(HWND hWnd)
 	//scene = std::make_unique<SpriteTestScene>();
 	//scene = std::make_unique<DepthTestScene>();
 	//scene = std::make_unique<BlendTestScene>();
-	scene = std::make_unique<RasterizeTestScene>();
+	//scene = std::make_unique<RasterizeTestScene>();
+	scene = std::make_unique<GizmosTestScene>();
 }
 
 // デストラクタ
