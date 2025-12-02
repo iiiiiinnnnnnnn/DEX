@@ -16,6 +16,15 @@ enum class ShaderId
 	EnumCount
 };
 
+enum class FrameBufferId
+{
+	Display,
+	Scene,
+	Luminance,
+
+	EnumCount
+};
+
 // グラフィックス
 class Graphics
 {
@@ -50,7 +59,10 @@ public:
 	float GetScreenHeight() const { return screenHeight; }
 
 	// フレームバッファ取得
-	FrameBuffer* GetFrameBuffer() { return frameBuffer.get(); }
+	FrameBuffer* GetFrameBuffer(FrameBufferId frameBufferId)
+	{
+		return frameBuffers[static_cast<int>(frameBufferId)].get();
+	}
 
 	// レンダーステート取得
 	RenderState* GetRenderState() { return renderState.get(); }
@@ -67,7 +79,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> immediateContext;
 	Microsoft::WRL::ComPtr<IDXGISwapChain> swapchain;
 
-	std::unique_ptr<FrameBuffer> frameBuffer;
+	std::unique_ptr<FrameBuffer> frameBuffers[static_cast<int>(FrameBufferId::EnumCount)];
 	std::unique_ptr<RenderState> renderState;
 	std::unique_ptr<Gizmos> gizmos;
 	std::unique_ptr<Shader> shaders[static_cast<int>(ShaderId::EnumCount)];

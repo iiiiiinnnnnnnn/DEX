@@ -69,7 +69,9 @@ void Graphics::Initialize(HWND hWnd)
 	}
 
 	// フレームバッファ作成
-	frameBuffer = std::make_unique<FrameBuffer>(device.Get(), swapchain.Get());
+	frameBuffers[static_cast<int>(FrameBufferId::Display)] = std::make_unique<FrameBuffer>(device.Get(), swapchain.Get());
+	frameBuffers[static_cast<int>(FrameBufferId::Scene)] = std::make_unique<FrameBuffer>(device.Get(), screenWidth, screenHeight);
+	frameBuffers[static_cast<int>(FrameBufferId::Luminance)] = std::make_unique<FrameBuffer>(device.Get(), screenWidth, screenHeight);
 
 	// レンダーステート生成
 	renderState = std::make_unique<RenderState>(device.Get());

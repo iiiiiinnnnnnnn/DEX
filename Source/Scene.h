@@ -6,6 +6,7 @@
 #include "FreeCameraController.h"
 #include "Model.h"
 #include "Light.h"
+#include "PostEffect.h"
 
 // シーン基底
 class Scene
@@ -118,4 +119,21 @@ private:
 	float animationBlendSeconds = 0.2f;
 
 	LightManager lightManager;
+};
+
+
+// ポストエフェクトテストシーン
+class PostEffectTestScene : public Scene
+{
+public:
+	PostEffectTestScene();
+	~PostEffectTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	std::unique_ptr<Sprite> sprite;
+	std::unique_ptr<PostEffect> postEffect;
+
+	// ポストエフェクトGUI描画
+	void DrawPostEffectGUI();
 };

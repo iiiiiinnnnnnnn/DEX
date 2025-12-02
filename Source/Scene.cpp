@@ -420,3 +420,82 @@ void ModelTestScene::DrawAnimationGUI()
 	}
 	ImGui::End();
 }
+
+
+// コンストラクタ
+PostEffectTestScene::PostEffectTestScene()
+{
+	ID3D11Device* device = Graphics::Instance().GetDevice();
+	sprite = std::make_unique<Sprite>(device, "Data/Sprite/screenshot.jpg");
+	postEffect = std::make_unique<PostEffect>(device);
+}
+
+// 描画処理
+void PostEffectTestScene::Render(float elapsedTime)
+{
+	ID3D11DeviceContext* dc = Graphics::Instance().GetDeviceContext();
+	RenderState* renderState = Graphics::Instance().GetRenderState();
+	float screenWidth = Graphics::Instance().GetScreenWidth();
+	float screenHeight = Graphics::Instance().GetScreenHeight();
+
+	// ブレンドステート設定
+	FLOAT blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	dc->OMSetBlendState(renderState->GetBlendState(BlendState::Opaque), blendFactor, 0xFFFFFFFF);
+
+	// 深度ステンシルステート設定
+	dc->OMSetDepthStencilState(renderState->GetDepthStencilState(DepthState::NoTestNoWrite), 0);
+
+	// ラスタライザーステート設定
+	dc->RSSetState(renderState->GetRasterizerState(RasterizerState::SolidCullNone));
+
+	// サンプラステート設定
+	ID3D11SamplerState* samplers[] =
+	{
+		renderState->GetSamplerState(SamplerState::LinearWrap)
+	};
+	dc->PSSetSamplers(0, _countof(samplers), samplers);
+
+	// フレームバッファを取得
+	FrameBuffer* displayFB = Graphics::Instance().GetFrameBuffer(FrameBufferId::Display);
+	FrameBuffer* sceneFB = Graphics::Instance().GetFrameBuffer(FrameBufferId::Scene);
+	FrameBuffer* luminanceFB = Graphics::Instance().GetFrameBuffer(FrameBufferId::Luminance);
+	// シーン用のフレームバッファにスプライトを描画
+	sceneFB->SetRenderTargets(dc);
+
+	// スプライト描画
+	sprite->Render(dc, 0, 0, 0, screenWidth, screenHeight, 0, 1, 1, 1, 1);
+
+	// 描画コンテキスト設定
+	RenderContext rc;
+	rc.deviceContext = Graphics::Instance().GetDeviceContext();
+	rc.renderState = Graphics::Instance().GetRenderState();
+
+	// ポストエフェクト処理開始
+	postEffect->Begin(rc);
+
+	// 輝度抽出処理
+	//displayFB->SetRenderTargets(dc); // バックバッファに輝度を抽出した結果を描画
+	luminanceFB->SetRenderTargets(dc); //輝度抽出用のフレームバッファに描画
+	postEffect->LuminanceExtraction(rc, sceneFB->GetColorMap());
+
+	// ブルーム処理
+	displayFB->SetRenderTargets(dc); // バックバッファにブルーム処理した結果を描画
+	postEffect->Bloom(rc, sceneFB->GetColorMap(), luminanceFB->GetColorMap());
+
+	// 終了処理
+	postEffect->End(rc);
+
+	// デバッグGUI描画
+	DrawPostEffectGUI();
+}
+
+// ポストエフェクトGUI描画
+void PostEffectTestScene::DrawPostEffectGUI()
+{
+	ImVec2 pos = ImGui::GetMainViewport()->GetWorkPos();
+	ImGui::SetNextWindowPos(ImVec2(pos.x + 10, pos.y + 10), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("PostEffect", nullptr, ImGuiWindowFlags_None);
+	postEffect->DrawDebugGUI();
+	ImGui::End();
+}

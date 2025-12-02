@@ -26,7 +26,8 @@ Framework::Framework(HWND hWnd)
 	//scene = std::make_unique<BlendTestScene>();
 	//scene = std::make_unique<RasterizeTestScene>();
 	//scene = std::make_unique<GizmosTestScene>();
-	scene = std::make_unique<ModelTestScene>();
+	//scene = std::make_unique<ModelTestScene>();
+	scene = std::make_unique<PostEffectTestScene>();
 }
 
 // デストラクタ
@@ -52,10 +53,10 @@ void Framework::Render(float elapsedTime)
 	ImGuiRenderer::NewFrame();
 
 	// 画面クリア
-	Graphics::Instance().GetFrameBuffer()->Clear(dc, 0, 0, 1, 1);
+	Graphics::Instance().GetFrameBuffer(FrameBufferId::Display)->Clear(dc, 0, 0, 1, 1);
 
 	// レンダーターゲット設定
-	Graphics::Instance().GetFrameBuffer()->SetRenderTargets(dc);
+	Graphics::Instance().GetFrameBuffer(FrameBufferId::Display)->SetRenderTargets(dc);
 
 	// シーン描画処理
 	scene->Render(elapsedTime);
