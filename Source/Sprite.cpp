@@ -1,9 +1,16 @@
 #include <fstream>
 #include "Sprite.h"
 #include "Misc.h"
+#include "GpuResourceUtils.h"
 
 // コンストラクタ
 Sprite::Sprite(ID3D11Device* device)
+	: Sprite(device, nullptr)
+{
+}
+
+// コンストラクタ
+Sprite::Sprite(ID3D11Device* device, const char* filename)
 {
 	HRESULT hr = S_OK;
 
@@ -26,51 +33,50 @@ Sprite::Sprite(ID3D11Device* device)
 
 	// 頂点シェーダー
 	{
-		std::ifstream fin("Data/Shader/SpriteVS.cso", std::ios::in | std::ios::binary);
-
-		// ファイルサイズを求める
-		fin.seekg(0, std::ios_base::end);
-		long long size = fin.tellg();
-		fin.seekg(0, std::ios_base::beg);
-
-		// 読み込み
-		std::unique_ptr<char[]> data = std::make_unique<char[]>(size);
-		fin.read(data.get(), size);
-
-		// 頂点シェーダー生成
-		HRESULT hr = device->CreateVertexShader(data.get(), size, nullptr, vertexShader.GetAddressOf());
-		_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
-
 		// 入力レイアウト
 		D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 		{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-		D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,
-		D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
-		hr = device->CreateInputLayout(inputElementDesc, ARRAYSIZE(inputElementDesc),
-			data.get(), size, inputLayout.GetAddressOf());
+		hr = GpuResourceUtils::LoadVertexShader(
+			device,
+			"Data/Shader/SpriteVS.cso",
+			inputElementDesc,
+			ARRAYSIZE(inputElementDesc),
+			inputLayout.GetAddressOf(),
+			vertexShader.GetAddressOf());
 		_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
 	}
 	// ピクセルシェーダー
 	{
-		std::ifstream fin("Data/Shader/SpritePS.cso",
-			std::ios::in | std::ios::binary);
-
-		// ファイルサイズを求める
-		fin.seekg(0, std::ios_base::end);
-		long long size = fin.tellg();
-		fin.seekg(0, std::ios_base::beg);
-
-		// 読み込み
-		std::unique_ptr<char[]> data = std::make_unique<char[]>(size);
-		fin.read(data.get(), size);
-
-		// ピクセルシェーダー生成
-		HRESULT hr = device->CreatePixelShader(data.get(), size, nullptr, pixelShader.GetAddressOf());
+		hr = GpuResourceUtils::LoadPixelShader(
+			device,
+			"Data/Shader/SpritePS.cso",
+			pixelShader.GetAddressOf());
 		_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+	}
+	// テクスチャの生成
+	if (filename != nullptr)
+	{
+		// テクスチャファイル読み込み
+		D3D11_TEXTURE2D_DESC desc;
+		hr = GpuResourceUtils::LoadTexture(device, filename, shaderResourceView.GetAddressOf(), &desc);
+		_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		textureWidth = static_cast<float>(desc.Width);
+		textureHeight = static_cast<float>(desc.Height);
+	}
+	else
+	{
+		// ダミーテクスチャ生成
+		D3D11_TEXTURE2D_DESC desc;
+		hr = GpuResourceUtils::CreateDummyTexture(device, 0xFFFFFFFF, shaderResourceView.GetAddressOf(),
+			&desc);
+		_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		textureWidth = static_cast<float>(desc.Width);
+		textureHeight = static_cast<float>(desc.Height);
 	}
 }
 
@@ -78,6 +84,8 @@ Sprite::Sprite(ID3D11Device* device)
 void Sprite::Render(ID3D11DeviceContext* dc,
 	float dx, float dy, // 左上位置
 	float dw, float dh, // 幅、高さ
+	float sx, float sy, // 画像切り抜き位置
+	float sw, float sh, // 画像切り抜きサイズ
 	float angle, // 角度
 	float r, float g, float b, float a // 色
 ) const
@@ -90,6 +98,16 @@ void Sprite::Render(ID3D11DeviceContext* dc,
 		DirectX::XMFLOAT2(dx + dw, dy), // 右上
 		DirectX::XMFLOAT2(dx, dy + dh), // 左下
 		DirectX::XMFLOAT2(dx + dw, dy + dh), // 右下
+	};
+
+	// テクスチャ座標
+	/* テクスチャ座標は0.0～1.0 の間で表現する */
+	/* ピクセル単位で切り抜く画像の領域を指定 */
+	DirectX::XMFLOAT2 texcoords[] = {
+		DirectX::XMFLOAT2(sx, sy), // 左上
+		DirectX::XMFLOAT2(sx + sw, sy), // 右上
+		DirectX::XMFLOAT2(sx, sy + sh), // 左下
+		DirectX::XMFLOAT2(sx + sw, sy + sh), // 右下
 	};
 
 	// スプライトの中心を軸に回転
@@ -152,6 +170,8 @@ void Sprite::Render(ID3D11DeviceContext* dc,
 		v[i].color.y = g;
 		v[i].color.z = b;
 		v[i].color.w = a;
+		v[i].texcoord.x = texcoords[i].x / textureWidth;
+		v[i].texcoord.y = texcoords[i].y / textureHeight;
 	}
 
 	// 頂点バッファの内容の編集を終了する。
@@ -165,7 +185,13 @@ void Sprite::Render(ID3D11DeviceContext* dc,
 	dc->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	dc->VSSetShader(vertexShader.Get(), nullptr, 0);
 	dc->PSSetShader(pixelShader.Get(), nullptr, 0);
+	dc->PSSetShaderResources(0, 1, shaderResourceView.GetAddressOf()); // テクスチャを設定
 
 	// 描画
 	dc->Draw(4, 0);
+}
+
+void Sprite::Render(ID3D11DeviceContext* dc, float dx, float dy, float dw, float dh, float angle, float r, float g, float b, float a) const
+{
+	Render(dc, dx, dy, dw, dh, 0, 0, textureWidth, textureHeight, angle, r, g, b, a);
 }

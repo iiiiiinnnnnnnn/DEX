@@ -67,6 +67,9 @@ void Graphics::Initialize(HWND hWnd)
 
 	// フレームバッファ作成
 	frameBuffer = std::make_unique<FrameBuffer>(device.Get(), swapchain.Get());
+
+	// レンダーステート生成
+	renderState = std::make_unique<RenderState>(device.Get());
 }
 
 // 画面表示

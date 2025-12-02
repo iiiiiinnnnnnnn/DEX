@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "FrameBuffer.h"
+#include "RenderState.h"
 
 // グラフィックス
 class Graphics
@@ -42,6 +43,9 @@ public:
 	// フレームバッファ取得
 	FrameBuffer* GetFrameBuffer() { return frameBuffer.get(); }
 
+	// レンダーステート取得
+	RenderState* GetRenderState() { return renderState.get(); }
+
 private:
 	// ComPtr で DirectX のオブジェクトをスマートポインタとして扱う。
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -49,6 +53,7 @@ private:
 	Microsoft::WRL::ComPtr<IDXGISwapChain> swapchain;
 
 	std::unique_ptr<FrameBuffer> frameBuffer;
+	std::unique_ptr<RenderState> renderState;
 
 	float screenWidth;
 	float screenHeight;
