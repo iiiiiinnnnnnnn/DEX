@@ -83,6 +83,7 @@ Sprite::Sprite(ID3D11Device* device, const char* filename)
 // 描画実行
 void Sprite::Render(ID3D11DeviceContext* dc,
 	float dx, float dy, // 左上位置
+	float dz, // 奥行
 	float dw, float dh, // 幅、高さ
 	float sx, float sy, // 画像切り抜き位置
 	float sw, float sh, // 画像切り抜きサイズ
@@ -165,7 +166,7 @@ void Sprite::Render(ID3D11DeviceContext* dc,
 	{
 		v[i].position.x = positions[i].x;
 		v[i].position.y = positions[i].y;
-		v[i].position.z = 0.0f;
+		v[i].position.z = dz; // 深度値を設定
 		v[i].color.x = r;
 		v[i].color.y = g;
 		v[i].color.z = b;
@@ -191,7 +192,7 @@ void Sprite::Render(ID3D11DeviceContext* dc,
 	dc->Draw(4, 0);
 }
 
-void Sprite::Render(ID3D11DeviceContext* dc, float dx, float dy, float dw, float dh, float angle, float r, float g, float b, float a) const
+void Sprite::Render(ID3D11DeviceContext* dc, float dx, float dy, float dz, float dw, float dh, float angle, float r, float g, float b, float a) const
 {
-	Render(dc, dx, dy, dw, dh, 0, 0, textureWidth, textureHeight, angle, r, g, b, a);
+	Render(dc, dx, dy, dz, dw, dh, 0, 0, textureWidth, textureHeight, angle, r, g, b, a);
 }

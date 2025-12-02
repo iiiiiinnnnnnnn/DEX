@@ -16,5 +16,6 @@ public:
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
 	D3D11_VIEWPORT viewport;
 };

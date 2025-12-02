@@ -30,3 +30,39 @@ public:
 private:
 	std::unique_ptr<Sprite> sprites[8];
 };
+
+// 深度テストシーン
+class DepthTestScene : public Scene
+{
+public:
+	DepthTestScene();
+	~DepthTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	std::unique_ptr<Sprite> sprite;
+};
+
+// ブレンドテストシーン
+class BlendTestScene : public Scene
+{
+public:
+	BlendTestScene();
+	~BlendTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	std::unique_ptr<Sprite> sprite;
+};
+
+// ラスタライズテストシーン
+class RasterizeTestScene : public Scene
+{
+public:
+	RasterizeTestScene();
+	~RasterizeTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	std::unique_ptr<Sprite> sprite;
+};
