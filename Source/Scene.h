@@ -101,6 +101,9 @@ private:
 	// プロパティGUI描画
 	void DrawPropertyGUI();
 
+	// アニメーションGUI描画
+	void DrawAnimationGUI();
+
 	Camera camera;
 	std::unique_ptr<Model> model;
 	DirectX::XMFLOAT3 position = { 0, 0, 0 };
@@ -109,4 +112,7 @@ private:
 
 	Model::Node* selectionNode = nullptr;
 	FreeCameraController cameraController;
+
+	bool animationLoop = false;
+	float animationBlendSeconds = 0.2f;
 };

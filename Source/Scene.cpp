@@ -239,7 +239,10 @@ ModelTestScene::ModelTestScene()
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.2.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
-	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.004.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.004.fbx");
+	model = std::make_unique<Model>(device, "Data/Model/Plantune/plantune.fbx");
+	model->PlayAnimation(0, true);
+	scale.x = scale.y = scale.z = 0.01f;
 
 	cameraController.SyncCameraToController(camera);
 }
@@ -257,6 +260,9 @@ void ModelTestScene::Render(float elapsedTime)
 	DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(position.x, position.y, position.z);
 	DirectX::XMFLOAT4X4 worldTransform;
 	DirectX::XMStoreFloat4x4(&worldTransform, S * R * T);
+
+	// アニメーション更新
+	model->UpdateAnimation(elapsedTime);
 
 	// トランスフォーム更新
 	model->UpdateTransform(worldTransform);
@@ -276,6 +282,7 @@ void ModelTestScene::Render(float elapsedTime)
 	// デバッグメニュー描画
 	DrawSceneGUI();
 	DrawPropertyGUI();
+	DrawAnimationGUI();
 }
 
 // シーンGUI描画
@@ -376,6 +383,34 @@ void ModelTestScene::DrawPropertyGUI()
 			// スケール
 			ImGui::DragFloat3("Scale", &selectionNode->scale.x, 0.01f);
 		}
+	}
+	ImGui::End();
+}
+
+// アニメーションGUI描画
+void ModelTestScene::DrawAnimationGUI()
+{
+	ImVec2 pos = ImGui::GetMainViewport()->GetWorkPos();
+	ImGui::SetNextWindowPos(ImVec2(pos.x + 10, pos.y + 350), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Animation", nullptr, ImGuiWindowFlags_None);
+	ImGui::Checkbox("Loop", &animationLoop);
+	ImGui::DragFloat("BlendSec", &animationBlendSeconds, 0.01f);
+	int index = 0;
+	for (const Model::Animation& animation : model->GetAnimations())
+	{
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf;
+		ImGui::TreeNodeEx(&animation, nodeFlags, animation.name.c_str());
+		// ダブルクリックでアニメーション再生
+		if (ImGui::IsItemClicked())
+		{
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			{
+				model->PlayAnimation(index, animationLoop, animationBlendSeconds);
+			}
+		}
+		ImGui::TreePop();
+		index++;
 	}
 	ImGui::End();
 }

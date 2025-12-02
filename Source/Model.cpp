@@ -107,6 +107,12 @@ Model::Model(ID3D11Device* device, const char* filename)
 			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
 		}
 	}
+
+	// アニメーションデータ読み取り
+	importer.LoadAnimations(animations, nodes);
+
+	// ノードキャッシュ
+	nodeCaches.resize(nodes.size());
 }
 
 // トランスフォーム更新処理
@@ -135,5 +141,178 @@ void Model::UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform)
 		// 計算結果を格納
 		DirectX::XMStoreFloat4x4(&node.localTransform, LocalTransform);
 		DirectX::XMStoreFloat4x4(&node.worldTransform, WorldTransform);
+	}
+}
+
+// アニメーション再生
+void Model::PlayAnimation(int index, bool loop, float blendSeconds)
+{
+	currentAnimationIndex = index;
+	currentAnimationSeconds = 0;
+	animationLoop = loop;
+	animationPlaying = true;
+
+	// ブレンドパラメータ
+	animationBlending = blendSeconds > 0.0f;
+	currentAnimationBlendSeconds = 0.0f;
+	animationBlendSecondsLength = blendSeconds;
+
+	// 現在の姿勢をキャッシュする
+	for (size_t i = 0; i < nodes.size(); ++i)
+	{
+		const Node& src = nodes.at(i);
+		NodeCache& dst = nodeCaches.at(i);
+		dst.position = src.position;
+		dst.rotation = src.rotation;
+		dst.scale = src.scale;
+	}
+}
+
+// アニメーション再生中か
+bool Model::IsPlayAnimation() const
+{
+	if (currentAnimationIndex < 0) return false;
+	if (currentAnimationIndex >= animations.size()) return false;
+	return animationPlaying;
+}
+
+// アニメーション更新処理
+void Model::UpdateAnimation(float elapsedTime)
+{
+	ComputeAnimation(elapsedTime);
+	ComputeBlending(elapsedTime);
+}
+
+// アニメーション計算処理
+void Model::ComputeAnimation(float elapsedTime)
+{
+	if (!IsPlayAnimation()) return;
+
+	// 指定のアニメーションデータを取得
+	const Animation& animation = animations.at(currentAnimationIndex);
+
+	// ノード毎のアニメーション処理
+	for (size_t nodeIndex = 0; nodeIndex < animation.nodeAnims.size(); ++nodeIndex)
+	{
+		Node& node = nodes.at(nodeIndex);
+		const NodeAnim& nodeAnim = animation.nodeAnims.at(nodeIndex);
+
+		// 位置
+		for (size_t index = 0; index < nodeAnim.positionKeyframes.size() - 1; ++index)
+		{
+			// 現在の時間がどのキーフレームの間にいるか判定する
+			const VectorKeyframe& keyframe0 = nodeAnim.positionKeyframes.at(index);
+			const VectorKeyframe& keyframe1 = nodeAnim.positionKeyframes.at(index + 1);
+			if (currentAnimationSeconds >= keyframe0.seconds && currentAnimationSeconds < keyframe1.seconds)
+			{
+				// 再生時間とキーフレームの時間から補完率を算出する
+				float rate = (currentAnimationSeconds - keyframe0.seconds) / (keyframe1.seconds - keyframe0.seconds);
+
+				// 前のキーフレームと次のキーフレームの姿勢を補完
+				DirectX::XMVECTOR V0 = DirectX::XMLoadFloat3(&keyframe0.value);
+				DirectX::XMVECTOR V1 = DirectX::XMLoadFloat3(&keyframe1.value);
+				DirectX::XMVECTOR V = DirectX::XMVectorLerp(V0, V1, rate);
+
+				// 計算結果をノードに格納
+				DirectX::XMStoreFloat3(&node.position, V);
+			}
+		}
+
+		// 回転
+		for (size_t index = 0; index < nodeAnim.rotationKeyframes.size() - 1; ++index)
+		{
+			// 現在の時間がどのキーフレームの間にいるか判定する
+			const QuaternionKeyframe& keyframe0 = nodeAnim.rotationKeyframes.at(index);
+			const QuaternionKeyframe& keyframe1 = nodeAnim.rotationKeyframes.at(index + 1);
+			if (currentAnimationSeconds >= keyframe0.seconds && currentAnimationSeconds < keyframe1.seconds)
+			{
+				// 再生時間とキーフレームの時間から補完率を算出する
+				float rate = (currentAnimationSeconds - keyframe0.seconds) / (keyframe1.seconds - keyframe0.seconds);
+
+				// 前のキーフレームと次のキーフレームの姿勢を補完
+				DirectX::XMVECTOR Q0 = DirectX::XMLoadFloat4(&keyframe0.value);
+				DirectX::XMVECTOR Q1 = DirectX::XMLoadFloat4(&keyframe1.value);
+				DirectX::XMVECTOR Q = DirectX::XMQuaternionSlerp(Q0, Q1, rate);
+
+				// 計算結果をノードに格納
+				DirectX::XMStoreFloat4(&node.rotation, Q);
+			}
+		}
+
+		// スケール
+		for (size_t index = 0; index < nodeAnim.scaleKeyframes.size() - 1; ++index)
+		{
+			// 現在の時間がどのキーフレームの間にいるか判定する
+			const VectorKeyframe& keyframe0 = nodeAnim.scaleKeyframes.at(index);
+			const VectorKeyframe& keyframe1 = nodeAnim.scaleKeyframes.at(index + 1);
+			if (currentAnimationSeconds >= keyframe0.seconds && currentAnimationSeconds < keyframe1.seconds)
+			{
+				// 再生時間とキーフレームの時間から補完率を算出する
+				float rate = (currentAnimationSeconds - keyframe0.seconds) / (keyframe1.seconds - keyframe0.seconds);
+
+				// 前のキーフレームと次のキーフレームの姿勢を補完
+				DirectX::XMVECTOR V0 = DirectX::XMLoadFloat3(&keyframe0.value);
+				DirectX::XMVECTOR V1 = DirectX::XMLoadFloat3(&keyframe1.value);
+				DirectX::XMVECTOR V = DirectX::XMVectorLerp(V0, V1, rate);
+
+				// 計算結果をノードに格納
+				DirectX::XMStoreFloat3(&node.scale, V);
+			}
+		}
+	}
+	// 時間経過
+	currentAnimationSeconds += elapsedTime;
+
+	// 再生時間が終端時間を超えたら
+	if (currentAnimationSeconds >= animation.secondsLength)
+	{
+		if (animationLoop)
+		{
+			// 再生時間を巻き戻す
+			currentAnimationSeconds -= animation.secondsLength;
+		}
+		else
+		{
+			// 再生終了時間にする
+			currentAnimationSeconds = animation.secondsLength;
+			animationPlaying = false;
+		}
+	}
+}
+
+// ブレンディング計算処理
+void Model::ComputeBlending(float elapsedTime)
+{
+	if (!animationBlending) return;
+
+	// ブレンド率の計算
+	float rate = currentAnimationBlendSeconds / animationBlendSecondsLength;
+
+	// ブレンド計算
+	int count = static_cast<int>(nodes.size());
+	for (int i = 0; i < count; ++i)
+	{
+		const NodeCache& cache = nodeCaches.at(i);
+		Node& node = nodes.at(i);
+		DirectX::XMVECTOR S0 = DirectX::XMLoadFloat3(&cache.scale);
+		DirectX::XMVECTOR S1 = DirectX::XMLoadFloat3(&node.scale);
+		DirectX::XMVECTOR R0 = DirectX::XMLoadFloat4(&cache.rotation);
+		DirectX::XMVECTOR R1 = DirectX::XMLoadFloat4(&node.rotation);
+		DirectX::XMVECTOR T0 = DirectX::XMLoadFloat3(&cache.position);
+		DirectX::XMVECTOR T1 = DirectX::XMLoadFloat3(&node.position);
+		DirectX::XMVECTOR S = DirectX::XMVectorLerp(S0, S1, rate);
+		DirectX::XMVECTOR R = DirectX::XMQuaternionSlerp(R0, R1, rate);
+		DirectX::XMVECTOR T = DirectX::XMVectorLerp(T0, T1, rate);
+		DirectX::XMStoreFloat3(&node.scale, S);
+		DirectX::XMStoreFloat4(&node.rotation, R);
+		DirectX::XMStoreFloat3(&node.position, T);
+	}
+
+	// 時間経過
+	currentAnimationBlendSeconds += elapsedTime;
+	if (currentAnimationBlendSeconds >= animationBlendSecondsLength)
+	{
+		currentAnimationBlendSeconds = animationBlendSecondsLength;
+		animationBlending = false;
 	}
 }

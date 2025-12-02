@@ -249,6 +249,7 @@ void AssimpImporter::LoadNodes(NodeList& nodes)
 	// 先頭のノードから順に処理していく
 	LoadNodes(nodes, aScene->mRootNode, -1);
 }
+
 // ノードデータを再帰読み込み
 void AssimpImporter::LoadNodes(NodeList& nodes, const aiNode* aNode, int parentIndex)
 {
@@ -275,6 +276,129 @@ void AssimpImporter::LoadNodes(NodeList& nodes, const aiNode* aNode, int parentI
 	{
 		LoadNodes(nodes, aNode->mChildren[aNodeIndex], parentIndex);
 	}
+}
+
+// アニメーションデータを読み込み
+void AssimpImporter::LoadAnimations(AnimationList& animations, const NodeList& nodes)
+{
+	for (uint32_t aAnimationIndex = 0; aAnimationIndex < aScene->mNumAnimations; ++aAnimationIndex)
+	{
+		const aiAnimation* aAnimation = aScene->mAnimations[aAnimationIndex];
+		Model::Animation& animation = animations.emplace_back();
+
+		// アニメーション情報
+		animation.name = aAnimation->mName.C_Str();
+		animation.secondsLength = static_cast<float>(aAnimation->mDuration / aAnimation->mTicksPerSecond);
+
+		// ノード毎のアニメーション
+		animation.nodeAnims.resize(nodes.size());
+		for (uint32_t aChannelIndex = 0; aChannelIndex < aAnimation->mNumChannels; ++aChannelIndex)
+		{
+			const aiNodeAnim* aNodeAnim = aAnimation->mChannels[aChannelIndex];
+			int nodeIndex = GetNodeIndex(nodes, aNodeAnim->mNodeName.C_Str());
+			if (nodeIndex < 0) continue;
+			const Model::Node& node = nodes.at(nodeIndex);
+			Model::NodeAnim& nodeAnim = animation.nodeAnims.at(nodeIndex);
+
+			// 位置
+			for (uint32_t aPositionIndex = 0; aPositionIndex < aNodeAnim->mNumPositionKeys; ++aPositionIndex)
+			{
+				const aiVectorKey& aKey = aNodeAnim->mPositionKeys[aPositionIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiVector3DToXMFLOAT3(aKey.mValue);
+			}
+
+			// 回転
+			for (uint32_t aRotationIndex = 0; aRotationIndex < aNodeAnim->mNumRotationKeys; ++aRotationIndex)
+			{
+				const aiQuatKey& aKey = aNodeAnim->mRotationKeys[aRotationIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiQuaternionToXMFLOAT4(aKey.mValue);
+			}
+			// スケール
+			for (uint32_t aScalingIndex = 0; aScalingIndex < aNodeAnim->mNumScalingKeys; ++aScalingIndex)
+			{
+				const aiVectorKey& aKey = aNodeAnim->mScalingKeys[aScalingIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiVector3DToXMFLOAT3(aKey.mValue);
+			}
+		}
+		// アニメーションがなかったノードに対して初期姿勢のキーフレームを追加する
+		for (size_t nodeIndex = 0; nodeIndex < animation.nodeAnims.size(); ++nodeIndex)
+		{
+			const Model::Node& node = nodes.at(nodeIndex);
+			Model::NodeAnim& nodeAnim = animation.nodeAnims.at(nodeIndex);
+
+			// 移動
+			if (nodeAnim.positionKeyframes.size() == 0)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.position;
+			}
+			if (nodeAnim.positionKeyframes.size() == 1)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.positionKeyframes.at(0).value;
+			}
+
+			// 回転
+			if (nodeAnim.rotationKeyframes.size() == 0)
+			{
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.rotation;
+			}
+			if (nodeAnim.rotationKeyframes.size() == 1)
+			{
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.rotationKeyframes.at(0).value;
+			}
+
+			// スケール
+			if (nodeAnim.scaleKeyframes.size() == 0)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.scale;
+			}
+			if (nodeAnim.scaleKeyframes.size() == 1)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.scaleKeyframes.at(0).value;
+			}
+		}
+	}
+}
+
+// ノードインデックス取得
+int AssimpImporter::GetNodeIndex(const NodeList& nodes, const char* name)
+{
+	int index = 0;
+	for (const Model::Node& node : nodes)
+	{
+		if (node.name == name)
+		{
+			return index;
+		}
+		index++;
+	}
+	return -1;
 }
 
 // aiVector3D → XMFLOAT3

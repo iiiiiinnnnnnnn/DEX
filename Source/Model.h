@@ -61,6 +61,32 @@ public:
 		std::vector<Bone> bones;
 	};
 
+	struct VectorKeyframe
+	{
+		float seconds;
+		DirectX::XMFLOAT3 value;
+	};
+
+	struct QuaternionKeyframe
+	{
+		float seconds;
+		DirectX::XMFLOAT4 value;
+	};
+
+	struct NodeAnim
+	{
+		std::vector<VectorKeyframe> positionKeyframes;
+		std::vector<QuaternionKeyframe> rotationKeyframes;
+		std::vector<VectorKeyframe> scaleKeyframes;
+	};
+
+	struct Animation
+	{
+		std::string name;
+		float secondsLength;
+		std::vector<NodeAnim> nodeAnims;
+	};
+
 	// ルートノード取得
 	Node* GetRootNode() { return nodes.data(); }
 
@@ -73,8 +99,44 @@ public:
 	// トランスフォーム更新処理
 	void UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform);
 
+	// アニメーション再生
+	void PlayAnimation(int index, bool loop, float blendSeconds = 0);
+
+	// アニメーション再生中か
+	bool IsPlayAnimation() const;
+
+	// アニメーション更新処理
+	void UpdateAnimation(float elapsedTime);
+
+	// アニメーションデータ取得
+	const std::vector<Animation>& GetAnimations() const { return animations; }
+
 private:
+
+	// アニメーション計算処理
+	void ComputeAnimation(float elapsedTime);
+
+	// ブレンディング計算処理
+	void ComputeBlending(float elapsedTime);
+
 	std::vector<Mesh> meshes;
 	std::vector<Material> materials;
 	std::vector<Node> nodes;
+
+	std::vector<Animation> animations;
+	int currentAnimationIndex = -1;
+	float currentAnimationSeconds = 0;
+	bool animationPlaying = false;
+	bool animationLoop = false;
+
+	struct NodeCache
+	{
+		DirectX::XMFLOAT3 position = { 0, 0, 0 };
+		DirectX::XMFLOAT4 rotation = { 0, 0, 0, 1 };
+		DirectX::XMFLOAT3 scale = { 1, 1, 1 };
+	};
+	std::vector<NodeCache> nodeCaches;
+	float currentAnimationBlendSeconds = 0.0f;
+	float animationBlendSecondsLength = -1.0f;
+	bool animationBlending = false;
 };
