@@ -19,6 +19,9 @@ Framework::Framework(HWND hWnd)
 
 	// IMGUI初期化
 	ImGuiRenderer::Initialize(hWnd, Graphics::Instance().GetDevice(), Graphics::Instance().GetDeviceContext());
+
+	// シーン初期化
+	scene = std::make_unique<SpriteTestScene>();
 }
 
 // デストラクタ
@@ -31,6 +34,8 @@ Framework::~Framework()
 // 更新処理
 void Framework::Update(float elapsedTime)
 {
+	// シーン更新処理
+	scene->Update(elapsedTime);
 }
 
 // 描画処理
@@ -47,7 +52,10 @@ void Framework::Render(float elapsedTime)
 	// レンダーターゲット設定
 	Graphics::Instance().GetFrameBuffer()->SetRenderTargets(dc);
 
-#if 1
+	// シーン描画処理
+	scene->Render(elapsedTime);
+
+#if 0
 	// IMGUIデモウインドウ描画（IMGUI機能テスト用）
 	ImGui::ShowDemoWindow();
 #endif

@@ -1,0 +1,32 @@
+#pragma once
+
+#include <memory>
+#include "Sprite.h"
+
+// シーン基底
+class Scene
+{
+public:
+	Scene() = default;
+	virtual ~Scene() = default;
+
+	// 更新処理
+	virtual void Update(float elapsedTime) {}
+
+	// 描画処理
+	virtual void Render(float elapsedTime) {}
+};
+
+// スプライトテストシーン
+class SpriteTestScene : public Scene
+{
+public:
+	SpriteTestScene();
+	~SpriteTestScene() override = default;
+
+	// 描画処理
+	void Render(float elapsedTime) override;
+
+private:
+	std::unique_ptr<Sprite> sprites[8];
+};

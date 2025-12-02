@@ -72,14 +72,11 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
-      <ShaderModel>
-      </ShaderModel>
-      <ObjectFileOutput>
-      </ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>Data\Shader\%(Filename).cso</ObjectFileOutput>
       <AssemblerOutput>
       </AssemblerOutput>
-      <AssemblerOutputFile>
-      </AssemblerOutputFile>
+      <AssemblerOutputFile>Data\Shader\%(Filename).cod</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -106,14 +103,11 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <FxCompile>
-      <ShaderModel>
-      </ShaderModel>
-      <ObjectFileOutput>
-      </ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <ObjectFileOutput>Data\Shader\%(Filename).cso</ObjectFileOutput>
       <AssemblerOutput>
       </AssemblerOutput>
-      <AssemblerOutputFile>
-      </AssemblerOutputFile>
+      <AssemblerOutputFile>Data\Shader\%(Filename).cod</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -131,6 +125,8 @@
     <ClInclude Include="Source\HighResolutionTimer.h" />
     <ClInclude Include="Source\ImGuiRenderer.h" />
     <ClInclude Include="Source\Misc.h" />
+    <ClInclude Include="Source\Scene.h" />
+    <ClInclude Include="Source\Sprite.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\imgui-docking\imgui.cpp" />
@@ -144,6 +140,21 @@
     <ClCompile Include="Source\Graphics.cpp" />
     <ClCompile Include="Source\ImGuiRenderer.cpp" />
     <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\Scene.cpp" />
+    <ClCompile Include="Source\Sprite.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shader\SpritePS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shader\SpriteVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shader\Sprite.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

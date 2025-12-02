@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include "HighResolutionTimer.h"
+#include "Scene.h"
 
 class Framework
 {
@@ -22,5 +23,6 @@ public:
 private:
 	const HWND				hWnd;
 	HighResolutionTimer		timer;
+	std::unique_ptr<Scene>  scene;
 };
 
