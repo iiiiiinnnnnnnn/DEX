@@ -13,8 +13,23 @@ Model::Model(ID3D11Device* device, const char* filename)
 	// ファイル読み込み
 	AssimpImporter importer(filename);
 
+	// ノードデータ読み取り
+	importer.LoadNodes(nodes);
+
 	// メッシュデータ読み取り
-	importer.LoadMeshes(meshes);
+	importer.LoadMeshes(meshes, nodes);
+
+	// ノード構築
+	for (size_t nodeIndex = 0; nodeIndex < nodes.size(); ++nodeIndex)
+	{
+		Node& node = nodes.at(nodeIndex);
+		// 親子関係を構築
+		node.parent = node.parentIndex >= 0 ? &nodes.at(node.parentIndex) : nullptr;
+		if (node.parent != nullptr)
+		{
+			node.parent->children.emplace_back(&node);
+		}
+	}
 
 	// マテリアルデータ読み取り
 	importer.LoadMaterials(materials);
@@ -43,6 +58,10 @@ Model::Model(ID3D11Device* device, const char* filename)
 	// メッシュ構築
 	for (Mesh& mesh : meshes)
 	{
+		// 参照ノード設定
+		// ノードインデックスデータから参照しやすいようにポインタを設定する
+		mesh.node = &nodes.at(mesh.nodeIndex);
+
 		// 参照マテリアル設定
 		// メッシュデータからアクセスしやすいようにマテリアルのポインタを保持する
 		mesh.material = &materials.at(mesh.materialIndex);
@@ -80,5 +99,34 @@ Model::Model(ID3D11Device* device, const char* filename)
 			HRESULT hr = device->CreateBuffer(&bufferDesc, &subresourceData, mesh.indexBuffer.GetAddressOf());
 			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
 		}
+	}
+}
+
+// トランスフォーム更新処理
+void Model::UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform)
+{
+	for (Node& node : nodes)
+	{
+		// ローカル行列算出
+		DirectX::XMMATRIX S = DirectX::XMMatrixScaling(node.scale.x, node.scale.y, node.scale.z);
+		DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&node.rotation));
+		DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(node.position.x, node.position.y, node.position.z);
+		DirectX::XMMATRIX LocalTransform = S * R * T;
+
+		// ワールド行列算出
+		DirectX::XMMATRIX ParentWorldTransform;
+		if (node.parent != nullptr)
+		{
+			ParentWorldTransform = DirectX::XMLoadFloat4x4(&node.parent->worldTransform);
+		}
+		else
+		{
+			ParentWorldTransform = DirectX::XMLoadFloat4x4(&worldTransform);
+		}
+		DirectX::XMMATRIX WorldTransform = LocalTransform * ParentWorldTransform;
+
+		// 計算結果を格納
+		DirectX::XMStoreFloat4x4(&node.localTransform, LocalTransform);
+		DirectX::XMStoreFloat4x4(&node.worldTransform, WorldTransform);
 	}
 }

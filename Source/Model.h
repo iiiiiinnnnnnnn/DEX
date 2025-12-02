@@ -25,6 +25,20 @@ public:
 		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseMap;
 	};
 
+	struct Node
+	{
+		std::string name;
+		int parentIndex;
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT4 rotation;
+		DirectX::XMFLOAT3 scale;
+
+		DirectX::XMFLOAT4X4 localTransform;
+		DirectX::XMFLOAT4X4 worldTransform;
+		Node* parent = nullptr;
+		std::vector<Node*> children;
+	};
+
 	struct Mesh
 	{
 		std::vector<Vertex> vertices;
@@ -33,6 +47,8 @@ public:
 		Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
 		int materialIndex = 0;
 		Material* material = nullptr;
+		int nodeIndex = 0;
+		Node* node = nullptr;
 	};
 
 	// メッシュデータ取得
@@ -41,7 +57,11 @@ public:
 	// マテリアルデータ取得
 	const std::vector<Material>& GetMaterials() const { return materials; }
 
+	// トランスフォーム更新処理
+	void UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform);
+
 private:
 	std::vector<Mesh> meshes;
 	std::vector<Material> materials;
+	std::vector<Node> nodes;
 };

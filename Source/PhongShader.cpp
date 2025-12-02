@@ -96,6 +96,7 @@ void PhongShader::Draw(const RenderContext& rc, const Model* model)
 		// メッシュ用定数バッファ更新
 		CbMesh cbMesh{};
 		cbMesh.materialColor = mesh.material->color;
+		cbMesh.worldTransform = mesh.node->worldTransform;
 		dc->UpdateSubresource(meshConstantBuffer.Get(), 0, 0, &cbMesh, 0, 0);
 
 		// シェーダーリソースビュー設定

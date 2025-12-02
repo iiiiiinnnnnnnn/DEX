@@ -24,6 +24,7 @@ private:
 	struct CbMesh
 	{
 		DirectX::XMFLOAT4 materialColor;
+		DirectX::XMFLOAT4X4 worldTransform;
 	};
 
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;

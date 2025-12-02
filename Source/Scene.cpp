@@ -216,6 +216,7 @@ ModelTestScene::ModelTestScene()
 	ID3D11Device* device = Graphics::Instance().GetDevice();
 	float screenWidth = Graphics::Instance().GetScreenWidth();
 	float screenHeight = Graphics::Instance().GetScreenHeight();
+
 	// カメラ設定
 	camera.SetPerspectiveFov(
 		DirectX::XMConvertToRadians(45), // 画角
@@ -228,21 +229,34 @@ ModelTestScene::ModelTestScene()
 		{ 0, 0, 0 }, // 注視点
 		{ 0, 1, 0 } // 上ベクトル
 	);
+
 	// モデル作成
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.000.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.0.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.2.fbx");
-	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
+	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
 }
 
 // 描画処理
 void ModelTestScene::Render(float elapsedTime)
 {
+	// ワールド行列計算
+	DirectX::XMMATRIX S = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
+	DirectX::XMMATRIX R = DirectX::XMMatrixRotationRollPitchYaw(angle.x, angle.y, angle.z);
+	DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(position.x, position.y, position.z);
+	DirectX::XMFLOAT4X4 worldTransform;
+	DirectX::XMStoreFloat4x4(&worldTransform, S * R * T);
+
+	// トランスフォーム更新
+	model->UpdateTransform(worldTransform);
+
 	// 描画コンテキスト設定
 	RenderContext rc;
 	rc.camera = &camera;
 	rc.deviceContext = Graphics::Instance().GetDeviceContext();
 	rc.renderState = Graphics::Instance().GetRenderState();
+
 	// 描画
 	Shader* shader = Graphics::Instance().GetShader(ShaderId::Phong);
 	shader->Begin(rc);

@@ -9,6 +9,17 @@
 AssimpImporter::AssimpImporter(const char* filename)
 	: filepath(filename)
 {
+	// 拡張子取得
+	std::string extension = filepath.extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(), tolower); // 小文字化
+
+	// FBXファイルの場合は特殊なインポートオプション設定をする
+	if (extension == ".fbx")
+	{
+		// $AssimpFBX$が付加された余計なノードを作成してしまうのを抑制する
+		aImporter.SetPropertyInteger(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+	}
+
 	// インポート時のオプションフラグ
 	uint32_t aFlags = aiProcess_Triangulate // 多角形を三角形化する
 		| aiProcess_JoinIdenticalVertices; // 重複頂点をマージする
@@ -19,44 +30,60 @@ AssimpImporter::AssimpImporter(const char* filename)
 }
 
 // メッシュデータを読み込み
-void AssimpImporter::LoadMeshes(MeshList& meshes)
+void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes)
+{
+	LoadMeshes(meshes, nodes, aScene->mRootNode);
+}
+void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes, const aiNode* aNode)
 {
 	const aiMesh* aMesh = aScene->mMeshes[0];
 
-	// メッシュデータ格納
-	Model::Mesh& mesh = meshes.emplace_back();
-	mesh.vertices.resize(aMesh->mNumVertices);
-	mesh.indices.resize(aMesh->mNumFaces * 3);
-	mesh.materialIndex = static_cast<int>(aMesh->mMaterialIndex);
-
-	// 頂点データ
-	for (uint32_t aVertexIndex = 0; aVertexIndex < aMesh->mNumVertices; ++aVertexIndex)
+	// メッシュデータ読み取り
+	for (uint32_t aMeshIndex = 0; aMeshIndex < aNode->mNumMeshes; ++aMeshIndex)
 	{
-		Model::Vertex& vertex = mesh.vertices.at(aVertexIndex);
+		const aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[aMeshIndex]];
+		// メッシュデータ格納
+		Model::Mesh& mesh = meshes.emplace_back();
+		mesh.nodeIndex = nodeIndexMap[aNode];
+		mesh.vertices.resize(aMesh->mNumVertices);
+		mesh.indices.resize(aMesh->mNumFaces * 3);
+		mesh.materialIndex = static_cast<int>(aMesh->mMaterialIndex);
 
-		// 位置
-		if (aMesh->HasPositions())
+		// 頂点データ
+		for (uint32_t aVertexIndex = 0; aVertexIndex < aMesh->mNumVertices; ++aVertexIndex)
 		{
-			vertex.position = aiVector3DToXMFLOAT3(aMesh->mVertices[aVertexIndex]);
+			Model::Vertex& vertex = mesh.vertices.at(aVertexIndex);
+
+			// 位置
+			if (aMesh->HasPositions())
+			{
+				vertex.position = aiVector3DToXMFLOAT3(aMesh->mVertices[aVertexIndex]);
+			}
+
+			// テクスチャ座標
+			if (aMesh->HasTextureCoords(0))
+			{
+				vertex.texcoord = aiVector3DToXMFLOAT2(aMesh->mTextureCoords[0][aVertexIndex]);
+				// OpenGL と DirectX で縦方向のテクスチャ座標が違う。Assimp は OpenGL 基準のデータなので変換する
+				vertex.texcoord.y = 1.0f - vertex.texcoord.y;
+			}
 		}
 
-		// テクスチャ座標
-		if (aMesh->HasTextureCoords(0))
+		// インデックスデータ
+		for (uint32_t aFaceIndex = 0; aFaceIndex < aMesh->mNumFaces; ++aFaceIndex)
 		{
-			vertex.texcoord = aiVector3DToXMFLOAT2(aMesh->mTextureCoords[0][aVertexIndex]);
-			// OpenGL と DirectX で縦方向のテクスチャ座標が違う。Assimp は OpenGL 基準のデータなので変換する
-			vertex.texcoord.y = 1.0f - vertex.texcoord.y;
+			const aiFace& aFace = aMesh->mFaces[aFaceIndex];
+			uint32_t index = aFaceIndex * 3;
+			mesh.indices[index + 0] = aFace.mIndices[0];
+			mesh.indices[index + 1] = aFace.mIndices[1];
+			mesh.indices[index + 2] = aFace.mIndices[2];
 		}
 	}
 
-	// インデックスデータ
-	for (uint32_t aFaceIndex = 0; aFaceIndex < aMesh->mNumFaces; ++aFaceIndex)
+	// 再帰的に子ノードを処理する
+	for (uint32_t aNodeIndex = 0; aNodeIndex < aNode->mNumChildren; ++aNodeIndex)
 	{
-		const aiFace& aFace = aMesh->mFaces[aFaceIndex];
-		uint32_t index = aFaceIndex * 3;
-		mesh.indices[index + 0] = aFace.mIndices[0];
-		mesh.indices[index + 1] = aFace.mIndices[1];
-		mesh.indices[index + 2] = aFace.mIndices[2];
+		LoadMeshes(meshes, nodes, aNode->mChildren[aNodeIndex]);
 	}
 }
 
@@ -152,6 +179,40 @@ void AssimpImporter::LoadMaterials(MaterialList& materials)
 	}
 }
 
+// ノードデータを読み込み
+void AssimpImporter::LoadNodes(NodeList& nodes)
+{
+	// 先頭のノードから順に処理していく
+	LoadNodes(nodes, aScene->mRootNode, -1);
+}
+// ノードデータを再帰読み込み
+void AssimpImporter::LoadNodes(NodeList& nodes, const aiNode* aNode, int parentIndex)
+{
+	// aiNode*からModel::Nodeのインデックスを取得できるようにする
+	std::map<const aiNode*, int>::iterator it = nodeIndexMap.find(aNode);
+	if (it == nodeIndexMap.end())
+	{
+		nodeIndexMap[aNode] = static_cast<int>(nodes.size());
+	}
+	// トランスフォームデータ取り出し
+	aiVector3D aScale, aPosition;
+	aiQuaternion aRotation;
+	aNode->mTransformation.Decompose(aScale, aRotation, aPosition);
+	// ノードデータ格納
+	Model::Node& node = nodes.emplace_back();
+	node.name = aNode->mName.C_Str();
+	node.parentIndex = parentIndex;
+	node.scale = aiVector3DToXMFLOAT3(aScale);
+	node.rotation = aiQuaternionToXMFLOAT4(aRotation);
+	node.position = aiVector3DToXMFLOAT3(aPosition);
+	parentIndex = static_cast<int>(nodes.size() - 1);
+	// 再帰的に子ノードを処理する
+	for (uint32_t aNodeIndex = 0; aNodeIndex < aNode->mNumChildren; ++aNodeIndex)
+	{
+		LoadNodes(nodes, aNode->mChildren[aNodeIndex], parentIndex);
+	}
+}
+
 // aiVector3D → XMFLOAT3
 DirectX::XMFLOAT3 AssimpImporter::aiVector3DToXMFLOAT3(const aiVector3D & aValue)
 {
@@ -177,5 +238,15 @@ DirectX::XMFLOAT2 AssimpImporter::AssimpImporter::aiVector3DToXMFLOAT2(const aiV
 	return DirectX::XMFLOAT2(
 		static_cast<float>(aValue.x),
 		static_cast<float>(aValue.y)
+	);
+}
+// aiQuaternion → XMFLOAT4
+DirectX::XMFLOAT4 AssimpImporter::aiQuaternionToXMFLOAT4(const aiQuaternion& aValue)
+{
+	return DirectX::XMFLOAT4(
+		static_cast<float>(aValue.x),
+		static_cast<float>(aValue.y),
+		static_cast<float>(aValue.z),
+		static_cast<float>(aValue.w)
 	);
 }
