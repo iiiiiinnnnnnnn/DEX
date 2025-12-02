@@ -123,6 +123,7 @@
     <ClInclude Include="Source\Camera.h" />
     <ClInclude Include="Source\FrameBuffer.h" />
     <ClInclude Include="Source\Framework.h" />
+    <ClInclude Include="Source\FreeCameraController.h" />
     <ClInclude Include="Source\Gizmos.h" />
     <ClInclude Include="Source\GpuResourceUtils.h" />
     <ClInclude Include="Source\Graphics.h" />
@@ -136,6 +137,7 @@
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\Shader.h" />
     <ClInclude Include="Source\Sprite.h" />
+    <ClInclude Include="Source\TransformUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="External\imgui-docking\imgui.cpp" />
@@ -148,6 +150,7 @@
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\FrameBuffer.cpp" />
     <ClCompile Include="Source\Framework.cpp" />
+    <ClCompile Include="Source\FreeCameraController.cpp" />
     <ClCompile Include="Source\Gizmos.cpp" />
     <ClCompile Include="Source\GpuResourceUtils.cpp" />
     <ClCompile Include="Source\Graphics.cpp" />
@@ -158,6 +161,7 @@
     <ClCompile Include="Source\RenderState.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\Sprite.cpp" />
+    <ClCompile Include="Source\TransformUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\GizmosPS.hlsl">

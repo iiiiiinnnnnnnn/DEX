@@ -1,5 +1,8 @@
 #include "Scene.h"
 #include "Graphics.h"
+#include <imgui.h>
+#include <functional>
+#include "TransformUtils.h"
 
 // コンストラクタ
 SpriteTestScene::SpriteTestScene()
@@ -236,11 +239,17 @@ ModelTestScene::ModelTestScene()
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.2.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
 	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
+
+	cameraController.SyncCameraToController(camera);
 }
 
 // 描画処理
 void ModelTestScene::Render(float elapsedTime)
 {
+	// カメラ更新処理
+	cameraController.Update();
+	cameraController.SyncControllerToCamera(camera);
+
 	// ワールド行列計算
 	DirectX::XMMATRIX S = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
 	DirectX::XMMATRIX R = DirectX::XMMatrixRotationRollPitchYaw(angle.x, angle.y, angle.z);
@@ -262,4 +271,110 @@ void ModelTestScene::Render(float elapsedTime)
 	shader->Begin(rc);
 	shader->Draw(rc, model.get());
 	shader->End(rc);
+
+	// デバッグメニュー描画
+	DrawSceneGUI();
+	DrawPropertyGUI();
+}
+
+// シーンGUI描画
+void ModelTestScene::DrawSceneGUI()
+{
+	ImVec2 pos = ImGui::GetMainViewport()->GetWorkPos();
+	ImGui::SetNextWindowPos(ImVec2(pos.x + 10, pos.y + 10), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+	if (ImGui::Begin("Scene", nullptr, ImGuiWindowFlags_None))
+	{
+		if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			// 位置
+			ImGui::DragFloat3("Position", &position.x, 0.1f);
+			// 回転
+			DirectX::XMFLOAT3 a;
+			a.x = DirectX::XMConvertToDegrees(angle.x);
+			a.y = DirectX::XMConvertToDegrees(angle.y);
+			a.z = DirectX::XMConvertToDegrees(angle.z);
+			ImGui::DragFloat3("Angle", &a.x, 1.0f);
+			angle.x = DirectX::XMConvertToRadians(a.x);
+			angle.y = DirectX::XMConvertToRadians(a.y);
+			angle.z = DirectX::XMConvertToRadians(a.z);
+			// スケール
+			ImGui::DragFloat3("Scale", &scale.x, 0.01f);
+		}
+		if (ImGui::CollapsingHeader("Hierarchy", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			// ノードツリーを再帰的に描画する関数
+			std::function<void(Model::Node*)> drawNodeTree = [&](Model::Node* node)
+				{
+					// 矢印をクリック、またはノードをダブルクリックで階層を開く
+					ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow
+						| ImGuiTreeNodeFlags_OpenOnDoubleClick;
+					// 子がいない場合は矢印をつけない
+					size_t childCount = node->children.size();
+					if (childCount == 0)
+					{
+						nodeFlags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+					}
+					// 選択フラグ
+					if (selectionNode == node)
+					{
+						nodeFlags |= ImGuiTreeNodeFlags_Selected;
+					}
+					// ツリーノードを表示
+					bool opened = ImGui::TreeNodeEx(node, nodeFlags, node->name.c_str());
+					// フォーカスされたノードを選択する
+					if (ImGui::IsItemFocused())
+					{
+						selectionNode = node;
+					}
+					// 開かれている場合、子階層も同じ処理を行う
+					if (opened && childCount > 0)
+					{
+						for (Model::Node* child : node->children)
+						{
+							drawNodeTree(child);
+						}
+						ImGui::TreePop();
+					}
+				};
+			// 再帰的にノードを描画
+			drawNodeTree(model->GetRootNode());
+		}
+		ImGui::End();
+	}
+}
+
+// プロパティGUI描画
+void ModelTestScene::DrawPropertyGUI()
+{
+	ImVec2 pos = ImGui::GetMainViewport()->GetWorkPos();
+	ImGui::SetNextWindowPos(ImVec2(pos.x + 970, pos.y + 10), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Property", nullptr, ImGuiWindowFlags_None);
+	if (selectionNode != nullptr)
+	{
+		if (ImGui::CollapsingHeader("Node", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			// 位置
+			ImGui::DragFloat3("Position", &selectionNode->position.x, 0.1f);
+			// 回転
+			DirectX::XMFLOAT3 angle;
+			TransformUtils::QuaternionToRollPitchYaw(selectionNode->rotation, angle.x, angle.y, angle.z);
+			angle.x = DirectX::XMConvertToDegrees(angle.x);
+			angle.y = DirectX::XMConvertToDegrees(angle.y);
+			angle.z = DirectX::XMConvertToDegrees(angle.z);
+			if (ImGui::DragFloat3("Rotation", &angle.x, 1.0f))
+			{
+				angle.x = DirectX::XMConvertToRadians(angle.x);
+				angle.y = DirectX::XMConvertToRadians(angle.y);
+				angle.z = DirectX::XMConvertToRadians(angle.z);
+				DirectX::XMVECTOR Rotation = DirectX::XMQuaternionRotationRollPitchYaw(
+					angle.x, angle.y, angle.z);
+				DirectX::XMStoreFloat4(&selectionNode->rotation, Rotation);
+			}
+			// スケール
+			ImGui::DragFloat3("Scale", &selectionNode->scale.x, 0.01f);
+		}
+	}
+	ImGui::End();
 }

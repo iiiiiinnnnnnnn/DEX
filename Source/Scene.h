@@ -3,6 +3,7 @@
 #include <memory>
 #include "Sprite.h"
 #include "Camera.h"
+#include "FreeCameraController.h"
 #include "Model.h"
 
 // シーン基底
@@ -89,12 +90,23 @@ class ModelTestScene : public Scene
 public:
 	ModelTestScene();
 	~ModelTestScene() override = default;
+
 	// 描画処理
 	void Render(float elapsedTime) override;
+
 private:
+	// シーンGUI描画
+	void DrawSceneGUI();
+
+	// プロパティGUI描画
+	void DrawPropertyGUI();
+
 	Camera camera;
 	std::unique_ptr<Model> model;
 	DirectX::XMFLOAT3 position = { 0, 0, 0 };
 	DirectX::XMFLOAT3 angle = { 0, 0, 0 };
 	DirectX::XMFLOAT3 scale = { 1, 1, 1 };
+
+	Model::Node* selectionNode = nullptr;
+	FreeCameraController cameraController;
 };

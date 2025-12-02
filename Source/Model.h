@@ -51,6 +51,9 @@ public:
 		Node* node = nullptr;
 	};
 
+	// ルートノード取得
+	Node* GetRootNode() { return nodes.data(); }
+
 	// メッシュデータ取得
 	const std::vector<Mesh>& GetMeshes() const { return meshes; }
 
