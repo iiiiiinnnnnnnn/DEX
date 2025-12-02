@@ -5,6 +5,7 @@ struct VS_OUT
     float3 normal : NORMAL;
     float3 position : POSITION;
     float3 tangent : TANGENT;
+    float3 shadow : SHADOW;
 };
 cbuffer CbScene : register(b0)
 {
@@ -12,6 +13,9 @@ cbuffer CbScene : register(b0)
     float4 lightDirection;
     float4 lightColor;
     float4 cameraPosition;
+    row_major float4x4 lightViewProjection;
+    float4 shadowColor;
+    float shadowTexelSize;
 };
 cbuffer CbMesh : register(b1)
 {

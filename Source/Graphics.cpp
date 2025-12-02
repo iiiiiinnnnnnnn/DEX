@@ -83,6 +83,9 @@ void Graphics::Initialize(HWND hWnd)
 	{
 		shaders[static_cast<int>(ShaderId::Phong)] = std::make_unique<PhongShader>(device.Get());
 	}
+
+	// シャドウマップ生成
+	shadowMap = std::make_unique<ShadowMap>(device.Get());
 }
 
 // 画面表示

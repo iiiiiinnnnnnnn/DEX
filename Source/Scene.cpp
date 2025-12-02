@@ -499,3 +499,95 @@ void PostEffectTestScene::DrawPostEffectGUI()
 	postEffect->DrawDebugGUI();
 	ImGui::End();
 }
+
+
+// コンストラクタ
+ShadowTestScene::ShadowTestScene()
+{
+	ID3D11Device* device = Graphics::Instance().GetDevice();
+	float screenWidth = Graphics::Instance().GetScreenWidth();
+	float screenHeight = Graphics::Instance().GetScreenHeight();
+
+	// カメラ設定
+	camera.SetPerspectiveFov(
+		DirectX::XMConvertToRadians(45), // 画角
+		screenWidth / screenHeight, // 画面アスペクト比
+		0.1f, // ニアクリップ
+		1000.0f // ファークリップ
+	);
+	camera.SetLookAt(
+		{ 0, 10, 20 }, // 視点
+		{ 0, 0, 0 }, // 注視点
+		{ 0, 1, 0 } // 上ベクトル
+	);
+	cameraController.SyncCameraToController(camera);
+
+	// モデル作成
+	stage = std::make_unique<Model>(device, "Data/Model/ExampleStage/ExampleStage.fbx");
+	character = std::make_unique<Model>(device, "Data/Model/Plantune/plantune.fbx", 0.01f);
+	character->PlayAnimation(0, true);
+
+	// ライト設定
+	DirectionalLight directionalLight;
+	directionalLight.direction = { -1, -1, 0 };
+	directionalLight.color = { 1, 1, 1 };
+	lightManager.SetDirectionalLight(directionalLight);
+}
+
+// 描画処理
+void ShadowTestScene::Render(float elapsedTime)
+{
+	ShadowMap* shadowMap = Graphics::Instance().GetShadowMap();
+
+	// カメラ更新処理
+	cameraController.Update();
+	cameraController.SyncControllerToCamera(camera);
+
+	// ワールド行列計算
+	DirectX::XMFLOAT4X4 worldTransform;
+	DirectX::XMStoreFloat4x4(&worldTransform, DirectX::XMMatrixIdentity());
+
+	// アニメーション更新
+	character->UpdateAnimation(elapsedTime);
+
+	// トランスフォーム更新
+	stage->UpdateTransform(worldTransform);
+	character->UpdateTransform(worldTransform);
+
+	// 描画コンテキスト設定
+	RenderContext rc;
+	rc.camera = &camera;
+	rc.deviceContext = Graphics::Instance().GetDeviceContext();
+	rc.renderState = Graphics::Instance().GetRenderState();
+	rc.lightManager = &lightManager;
+	rc.shadowMap = shadowMap;
+	rc.shadowColor = { 0.5f, 0.5f, 0.5f };
+
+	// シャドウマップ描画
+	shadowMap->Begin(rc, camera.GetFocus());
+	shadowMap->Draw(rc, stage.get());
+	shadowMap->Draw(rc, character.get());
+	shadowMap->End(rc);
+
+	// 描画
+	Shader* shader = Graphics::Instance().GetShader(ShaderId::Phong);
+	shader->Begin(rc);
+	shader->Draw(rc, stage.get());
+	shader->Draw(rc, character.get());
+	shader->End(rc);
+
+	// デバッグGUI描画
+	DrawShadowMapGUI();
+}
+
+// シャドウマップGUI描画
+void ShadowTestScene::DrawShadowMapGUI()
+{
+	ShadowMap* shadowMap = Graphics::Instance().GetShadowMap();
+	ImVec2 pos = ImGui::GetMainViewport()->GetWorkPos();
+	ImGui::SetNextWindowPos(ImVec2(pos.x + 10, pos.y + 10), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(300, 300), ImGuiCond_FirstUseEver);
+	ImGui::Begin("ShadowMap", nullptr, ImGuiWindowFlags_None);
+	ImGui::Image(shadowMap->GetShaderResourceView(), ImVec2(200, 200));
+	ImGui::End();
+}

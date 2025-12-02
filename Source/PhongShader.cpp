@@ -72,7 +72,8 @@ void PhongShader::Begin(const RenderContext& rc)
 	// サンプラステート設定
 	ID3D11SamplerState* samplerStates[] =
 	{
-		rc.renderState->GetSamplerState(SamplerState::LinearWrap)
+		rc.renderState->GetSamplerState(SamplerState::LinearWrap),
+		rc.shadowMap->GetSamplerState(),
 	};
 	dc->PSSetSamplers(0, _countof(samplerStates), samplerStates);
 
@@ -89,6 +90,11 @@ void PhongShader::Begin(const RenderContext& rc)
 	DirectX::XMMATRIX V = DirectX::XMLoadFloat4x4(&rc.camera->GetView());
 	DirectX::XMMATRIX P = DirectX::XMLoadFloat4x4(&rc.camera->GetProjection());
 	DirectX::XMStoreFloat4x4(&cbScene.viewProjection, V * P);
+	cbScene.lightViewProjection = rc.shadowMap->GetLightViewProjection();
+	cbScene.shadowColor.x = rc.shadowColor.x;
+	cbScene.shadowColor.y = rc.shadowColor.y;
+	cbScene.shadowColor.z = rc.shadowColor.z;
+	cbScene.shadowTexelSize = rc.shadowMap->GetTexelSize();
 
 	const DirectionalLight& directionalLight = rc.lightManager->GetDirectionalLight();
 	cbScene.lightDirection.x = directionalLight.direction.x;
@@ -150,6 +156,7 @@ void PhongShader::Draw(const RenderContext& rc, const Model* model)
 		{
 			mesh.material->diffuseMap.Get(),
 			mesh.material->normalMap.Get(),
+			rc.shadowMap->GetShaderResourceView(),
 		};
 		dc->PSSetShaderResources(0, _countof(srvs), srvs);
 
@@ -165,4 +172,8 @@ void PhongShader::End(const RenderContext& rc)
 	dc->VSSetShader(nullptr, nullptr, 0);
 	dc->PSSetShader(nullptr, nullptr, 0);
 	dc->IASetInputLayout(nullptr);
+
+	// 設定されているシェーダーリソースを解除
+	ID3D11ShaderResourceView* srvs[] = { nullptr, nullptr, nullptr };
+	dc->PSSetShaderResources(0, _countof(srvs), srvs);
 }

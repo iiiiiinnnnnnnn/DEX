@@ -8,6 +8,7 @@
 #include "RenderState.h"
 #include "Gizmos.h"
 #include "Shader.h"
+#include "ShadowMap.h"
 
 enum class ShaderId
 {
@@ -73,6 +74,9 @@ public:
 	// シェーダー取得
 	Shader* GetShader(ShaderId shaderId) { return shaders[static_cast<int>(shaderId)].get(); }
 
+	// シャドウマップ取得
+	ShadowMap* GetShadowMap() { return shadowMap.get(); }
+
 private:
 	// ComPtr で DirectX のオブジェクトをスマートポインタとして扱う。
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -83,6 +87,7 @@ private:
 	std::unique_ptr<RenderState> renderState;
 	std::unique_ptr<Gizmos> gizmos;
 	std::unique_ptr<Shader> shaders[static_cast<int>(ShaderId::EnumCount)];
+	std::unique_ptr<ShadowMap> shadowMap;
 
 	float screenWidth;
 	float screenHeight;

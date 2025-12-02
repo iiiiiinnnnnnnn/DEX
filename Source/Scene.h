@@ -137,3 +137,22 @@ private:
 	// ポストエフェクトGUI描画
 	void DrawPostEffectGUI();
 };
+
+
+// シャドウテストシーン
+class ShadowTestScene : public Scene
+{
+public:
+	ShadowTestScene();
+	~ShadowTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	// シャドウマップGUI描画
+	void DrawShadowMapGUI();
+	Camera camera;
+	FreeCameraController cameraController;
+	LightManager lightManager;
+	std::unique_ptr<Model> stage;
+	std::unique_ptr<Model> character;
+};

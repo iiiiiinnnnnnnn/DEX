@@ -138,6 +138,7 @@
     <ClInclude Include="Source\RenderState.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\Shader.h" />
+    <ClInclude Include="Source\ShadowMap.h" />
     <ClInclude Include="Source\Sprite.h" />
     <ClInclude Include="Source\TransformUtils.h" />
   </ItemGroup>
@@ -163,6 +164,7 @@
     <ClCompile Include="Source\PostEffect.cpp" />
     <ClCompile Include="Source\RenderState.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
+    <ClCompile Include="Source\ShadowMap.cpp" />
     <ClCompile Include="Source\Sprite.cpp" />
     <ClCompile Include="Source\TransformUtils.cpp" />
   </ItemGroup>
@@ -192,6 +194,10 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\PhongVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shader\ShadowMapVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
