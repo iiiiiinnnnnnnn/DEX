@@ -1,6 +1,8 @@
 #include "Misc.h"
 #include "Graphics.h"
 
+#include "PhongShader.h"
+
 // 初期化
 void Graphics::Initialize(HWND hWnd)
 {
@@ -74,6 +76,11 @@ void Graphics::Initialize(HWND hWnd)
 
 	// ギズモ生成
 	gizmos = std::make_unique<Gizmos>(device.Get());
+
+	// シェーダー生成
+	{
+		shaders[static_cast<int>(ShaderId::Phong)] = std::make_unique<PhongShader>(device.Get());
+	}
 }
 
 // 画面表示

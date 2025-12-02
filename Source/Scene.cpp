@@ -208,3 +208,41 @@ void GizmosTestScene::Render(float elapsedTime)
 	// 描画実行
 	gizmos->Render(rc);
 }
+
+
+// コンストラクタ
+ModelTestScene::ModelTestScene()
+{
+	ID3D11Device* device = Graphics::Instance().GetDevice();
+	float screenWidth = Graphics::Instance().GetScreenWidth();
+	float screenHeight = Graphics::Instance().GetScreenHeight();
+	// カメラ設定
+	camera.SetPerspectiveFov(
+		DirectX::XMConvertToRadians(45), // 画角
+		screenWidth / screenHeight, // 画面アスペクト比
+		0.1f, // ニアクリップ
+		1000.0f // ファークリップ
+	);
+	camera.SetLookAt(
+		{ 5, 3, -5 }, // 視点
+		{ 0, 0, 0 }, // 注視点
+		{ 0, 1, 0 } // 上ベクトル
+	);
+	// モデル作成
+	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.000.fbx");
+}
+
+// 描画処理
+void ModelTestScene::Render(float elapsedTime)
+{
+	// 描画コンテキスト設定
+	RenderContext rc;
+	rc.camera = &camera;
+	rc.deviceContext = Graphics::Instance().GetDeviceContext();
+	rc.renderState = Graphics::Instance().GetRenderState();
+	// 描画
+	Shader* shader = Graphics::Instance().GetShader(ShaderId::Phong);
+	shader->Begin(rc);
+	shader->Draw(rc, model.get());
+	shader->End(rc);
+}

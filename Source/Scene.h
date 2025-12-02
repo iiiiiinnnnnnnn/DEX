@@ -3,6 +3,7 @@
 #include <memory>
 #include "Sprite.h"
 #include "Camera.h"
+#include "Model.h"
 
 // シーン基底
 class Scene
@@ -79,4 +80,18 @@ public:
 private:
 	Camera camera;
 	float rotation = 0;
+};
+
+
+// モデルテストシーン
+class ModelTestScene : public Scene
+{
+public:
+	ModelTestScene();
+	~ModelTestScene() override = default;
+	// 描画処理
+	void Render(float elapsedTime) override;
+private:
+	Camera camera;
+	std::unique_ptr<Model> model;
 };

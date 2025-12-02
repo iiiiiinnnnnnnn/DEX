@@ -7,6 +7,14 @@
 #include "FrameBuffer.h"
 #include "RenderState.h"
 #include "Gizmos.h"
+#include "Shader.h"
+
+enum class ShaderId
+{
+	Phong,
+
+	EnumCount
+};
 
 // グラフィックス
 class Graphics
@@ -50,6 +58,9 @@ public:
 	// ギズモ取得
 	Gizmos* GetGizmos() { return gizmos.get(); }
 
+	// シェーダー取得
+	Shader* GetShader(ShaderId shaderId) { return shaders[static_cast<int>(shaderId)].get(); }
+
 private:
 	// ComPtr で DirectX のオブジェクトをスマートポインタとして扱う。
 	Microsoft::WRL::ComPtr<ID3D11Device> device;
@@ -59,6 +70,7 @@ private:
 	std::unique_ptr<FrameBuffer> frameBuffer;
 	std::unique_ptr<RenderState> renderState;
 	std::unique_ptr<Gizmos> gizmos;
+	std::unique_ptr<Shader> shaders[static_cast<int>(ShaderId::EnumCount)];
 
 	float screenWidth;
 	float screenHeight;

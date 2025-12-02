@@ -1,0 +1,28 @@
+#pragma once
+#include "Shader.h"
+
+class PhongShader : public Shader
+{
+public:
+	PhongShader(ID3D11Device* device);
+	~PhongShader() override = default;
+
+	// •`‰æŠJn
+	void Begin(const RenderContext& rc) override;
+
+	// ƒ‚ƒfƒ‹•`‰æ
+	void Draw(const RenderContext& rc, const Model* model) override;
+
+	// •`‰æI—¹
+	void End(const RenderContext& rc) override;
+
+private:
+	struct CbScene
+	{
+		DirectX::XMFLOAT4X4 viewProjection;
+	};
+	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+};
