@@ -11,27 +11,6 @@ class Model
 public:
 	Model(ID3D11Device* device, const char* filename, float scaling = 1.0f);
 
-	struct Material
-	{
-		std::string name;
-		std::string diffuseTextureFileName;
-		std::string normalTextureFileName;
-
-		DirectX::XMFLOAT4 color = { 1, 1, 1, 1 };
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseMap;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
-	};
-
-	struct Vertex
-	{
-		DirectX::XMFLOAT3 position = { 0, 0, 0 };
-		DirectX::XMFLOAT4 boneWeight = { 1, 0, 0, 0 };
-		DirectX::XMUINT4 boneIndex = { 0, 0, 0, 0 };
-		DirectX::XMFLOAT2 texcoord = { 0, 0 };
-		DirectX::XMFLOAT3 normal = { 0, 0, 0 };
-		DirectX::XMFLOAT3 tangent = { 0, 0, 0 };
-	};
-
 	struct Node
 	{
 		std::string name;
@@ -45,6 +24,36 @@ public:
 		DirectX::XMFLOAT4X4 worldTransform;
 		Node* parent = nullptr;
 		std::vector<Node*> children;
+
+		template<class Archive>
+		void serialize(Archive& archive);
+	};
+
+	struct Material
+	{
+		std::string name;
+		std::string diffuseTextureFileName;
+		std::string normalTextureFileName;
+
+		DirectX::XMFLOAT4 color = { 1, 1, 1, 1 };
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseMap;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
+
+		template<class Archive>
+		void serialize(Archive& archive);
+	};
+
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 position = { 0, 0, 0 };
+		DirectX::XMFLOAT4 boneWeight = { 1, 0, 0, 0 };
+		DirectX::XMUINT4 boneIndex = { 0, 0, 0, 0 };
+		DirectX::XMFLOAT2 texcoord = { 0, 0 };
+		DirectX::XMFLOAT3 normal = { 0, 0, 0 };
+		DirectX::XMFLOAT3 tangent = { 0, 0, 0 };
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct Bone
@@ -52,6 +61,9 @@ public:
 		int nodeIndex;
 		DirectX::XMFLOAT4X4 offsetTransform;
 		Node* node = nullptr;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct Mesh
@@ -65,18 +77,27 @@ public:
 		int nodeIndex = 0;
 		Node* node = nullptr;
 		std::vector<Bone> bones;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct VectorKeyframe
 	{
 		float seconds;
 		DirectX::XMFLOAT3 value;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct QuaternionKeyframe
 	{
 		float seconds;
 		DirectX::XMFLOAT4 value;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct NodeAnim
@@ -84,6 +105,9 @@ public:
 		std::vector<VectorKeyframe> positionKeyframes;
 		std::vector<QuaternionKeyframe> rotationKeyframes;
 		std::vector<VectorKeyframe> scaleKeyframes;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	struct Animation
@@ -91,6 +115,9 @@ public:
 		std::string name;
 		float secondsLength;
 		std::vector<NodeAnim> nodeAnims;
+
+		template<class Archive>
+		void serialize(Archive& archive);
 	};
 
 	// ルートノード取得
@@ -124,6 +151,12 @@ private:
 
 	// ブレンディング計算処理
 	void ComputeBlending(float elapsedTime);
+
+	// シリアライズ
+	void Serialize(const char* filename);
+
+	// デシリアライズ
+	void Deserialize(const char* filename);
 
 	std::vector<Mesh> meshes;
 	std::vector<Material> materials;
