@@ -229,7 +229,10 @@ ModelTestScene::ModelTestScene()
 		{ 0, 1, 0 } // 上ベクトル
 	);
 	// モデル作成
-	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.000.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.000.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.0.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.2.fbx");
+	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
 }
 
 // 描画処理

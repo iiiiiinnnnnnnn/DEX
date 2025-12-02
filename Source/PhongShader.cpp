@@ -8,6 +8,7 @@ PhongShader::PhongShader(ID3D11Device* device)
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	// 頂点シェーダー
@@ -30,6 +31,12 @@ PhongShader::PhongShader(ID3D11Device* device)
 		device,
 		sizeof(CbScene),
 		sceneConstantBuffer.GetAddressOf());
+
+	// メッシュ用定数バッファ
+	GpuResourceUtils::CreateConstantBuffer(
+		device,
+		sizeof(CbMesh),
+		meshConstantBuffer.GetAddressOf());
 }
 // 描画開始
 void PhongShader::Begin(const RenderContext& rc)
@@ -45,8 +52,17 @@ void PhongShader::Begin(const RenderContext& rc)
 	ID3D11Buffer* constantBuffers[] =
 	{
 		sceneConstantBuffer.Get(),
+		meshConstantBuffer.Get(),
 	};
 	rc.deviceContext->VSSetConstantBuffers(0, _countof(constantBuffers), constantBuffers);
+	rc.deviceContext->PSSetConstantBuffers(0, _countof(constantBuffers), constantBuffers);
+
+	// サンプラステート設定
+	ID3D11SamplerState* samplerStates[] =
+	{
+		rc.renderState->GetSamplerState(SamplerState::LinearWrap)
+	};
+	dc->PSSetSamplers(0, _countof(samplerStates), samplerStates);
 
 	// レンダーステート設定
 	const float blend_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -76,6 +92,15 @@ void PhongShader::Draw(const RenderContext& rc, const Model* model)
 		dc->IASetVertexBuffers(0, 1, mesh.vertexBuffer.GetAddressOf(), &stride, &offset);
 		dc->IASetIndexBuffer(mesh.indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 		dc->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		// メッシュ用定数バッファ更新
+		CbMesh cbMesh{};
+		cbMesh.materialColor = mesh.material->color;
+		dc->UpdateSubresource(meshConstantBuffer.Get(), 0, 0, &cbMesh, 0, 0);
+
+		// シェーダーリソースビュー設定
+		dc->PSSetShaderResources(0, 1, mesh.material->diffuseMap.GetAddressOf());
+
 		// 描画
 		dc->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);
 	}

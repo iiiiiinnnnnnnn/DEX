@@ -21,8 +21,15 @@ private:
 	{
 		DirectX::XMFLOAT4X4 viewProjection;
 	};
-	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
+	struct CbMesh
+	{
+		DirectX::XMFLOAT4 materialColor;
+	};
+
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+
+	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> meshConstantBuffer;
 };

@@ -1,19 +1,52 @@
 #include "Misc.h"
 #include "AssimpImporter.h"
 #include "Model.h"
+#include <filesystem>
+#include "GpuResourceUtils.h"
 
 // コンストラクタ
 Model::Model(ID3D11Device* device, const char* filename)
 {
+	std::filesystem::path filepath(filename);
+	std::filesystem::path dirpath(filepath.parent_path()); // ディレクトリパスを取得
+
 	// ファイル読み込み
 	AssimpImporter importer(filename);
 
 	// メッシュデータ読み取り
 	importer.LoadMeshes(meshes);
 
+	// マテリアルデータ読み取り
+	importer.LoadMaterials(materials);
+
+	// マテリアル構築
+	for (Material& material : materials)
+	{
+		if (material.diffuseTextureFileName.empty())
+		{
+			// ダミーテクスチャ作成
+			HRESULT hr = GpuResourceUtils::CreateDummyTexture(device, 0xFFFFFFFF,
+				material.diffuseMap.GetAddressOf());
+			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		}
+		else
+		{
+			// ディフューズテクスチャ読み込み
+			// 相対パスを解決し、テクスチャファイルパスを作成
+			std::filesystem::path diffuseTexturePath(dirpath / material.diffuseTextureFileName);
+			HRESULT hr = GpuResourceUtils::LoadTexture(device, diffuseTexturePath.string().c_str(),
+				material.diffuseMap.GetAddressOf());
+			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		}
+	}
+
 	// メッシュ構築
 	for (Mesh& mesh : meshes)
 	{
+		// 参照マテリアル設定
+		// メッシュデータからアクセスしやすいようにマテリアルのポインタを保持する
+		mesh.material = &materials.at(mesh.materialIndex);
+
 		// 頂点バッファ
 		{
 			D3D11_BUFFER_DESC bufferDesc = {};
