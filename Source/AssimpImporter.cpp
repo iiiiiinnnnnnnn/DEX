@@ -22,7 +22,8 @@ AssimpImporter::AssimpImporter(const char* filename)
 
 	// インポート時のオプションフラグ
 	uint32_t aFlags = aiProcess_Triangulate // 多角形を三角形化する
-		| aiProcess_JoinIdenticalVertices; // 重複頂点をマージする
+		| aiProcess_JoinIdenticalVertices // 重複頂点をマージする
+		| aiProcess_PopulateArmatureData; // ボーンの参照データを取得できるようにする
 
 	// ファイル読み込み
 	aScene = aImporter.ReadFile(filename, aFlags);
@@ -42,6 +43,7 @@ void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes, const a
 	for (uint32_t aMeshIndex = 0; aMeshIndex < aNode->mNumMeshes; ++aMeshIndex)
 	{
 		const aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[aMeshIndex]];
+
 		// メッシュデータ格納
 		Model::Mesh& mesh = meshes.emplace_back();
 		mesh.nodeIndex = nodeIndexMap[aNode];
@@ -77,6 +79,68 @@ void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes, const a
 			mesh.indices[index + 0] = aFace.mIndices[0];
 			mesh.indices[index + 1] = aFace.mIndices[1];
 			mesh.indices[index + 2] = aFace.mIndices[2];
+		}
+
+		// スキニングデータ
+		if (aMesh->mNumBones > 0)
+		{
+			// ボーン影響力データ
+			struct BoneInfluence
+			{
+				uint32_t indices[4] = { 0, 0, 0, 0 };
+				float weights[4] = { 1, 0, 0, 0 };
+				int useCount = 0;
+				void Add(uint32_t index, float weight)
+				{
+					if (useCount >= 4) return;
+					for (int i = 0; i < useCount; ++i)
+					{
+						if (indices[i] == index)
+						{
+							return;
+						}
+					}
+					indices[useCount] = index;
+					weights[useCount] = weight;
+					useCount++;
+				}
+			};
+			std::vector<BoneInfluence> boneInfluences;
+			boneInfluences.resize(aMesh->mNumVertices);
+
+			// メッシュに影響するボーンデータを収集する
+			for (uint32_t aBoneIndex = 0; aBoneIndex < aMesh->mNumBones; ++aBoneIndex)
+			{
+				const aiBone* aBone = aMesh->mBones[aBoneIndex];
+
+				// 頂点影響力データを抽出
+				for (uint32_t aWightIndex = 0; aWightIndex < aBone->mNumWeights; ++aWightIndex)
+				{
+					const aiVertexWeight& aWeight = aBone->mWeights[aWightIndex];
+					BoneInfluence& boneInfluence = boneInfluences.at(aWeight.mVertexId);
+					boneInfluence.Add(aBoneIndex, aWeight.mWeight);
+				}
+
+				// ボーンデータ取得
+				Model::Bone& bone = mesh.bones.emplace_back();
+				bone.nodeIndex = nodeIndexMap[aBone->mNode];
+				bone.offsetTransform = aiMatrix4x4ToXMFLOAT4X4(aBone->mOffsetMatrix);
+			}
+
+			// 頂点影響力データを格納
+			for (size_t vertexIndex = 0; vertexIndex < mesh.vertices.size(); ++vertexIndex)
+			{
+				Model::Vertex& vertex = mesh.vertices.at(vertexIndex);
+				BoneInfluence& boneInfluence = boneInfluences.at(vertexIndex);
+				vertex.boneWeight.x = boneInfluence.weights[0];
+				vertex.boneWeight.y = boneInfluence.weights[1];
+				vertex.boneWeight.z = boneInfluence.weights[2];
+				vertex.boneWeight.w = boneInfluence.weights[3];
+				vertex.boneIndex.x = boneInfluence.indices[0];
+				vertex.boneIndex.y = boneInfluence.indices[1];
+				vertex.boneIndex.z = boneInfluence.indices[2];
+				vertex.boneIndex.w = boneInfluence.indices[3];
+			}
 		}
 	}
 
@@ -248,5 +312,27 @@ DirectX::XMFLOAT4 AssimpImporter::aiQuaternionToXMFLOAT4(const aiQuaternion& aVa
 		static_cast<float>(aValue.y),
 		static_cast<float>(aValue.z),
 		static_cast<float>(aValue.w)
+	);
+}
+// aiMatrix4x4 → XMFLOAT4X4
+DirectX::XMFLOAT4X4 AssimpImporter::aiMatrix4x4ToXMFLOAT4X4(const aiMatrix4x4& aValue)
+{
+	return DirectX::XMFLOAT4X4(
+		static_cast<float>(aValue.a1),
+		static_cast<float>(aValue.b1),
+		static_cast<float>(aValue.c1),
+		static_cast<float>(aValue.d1),
+		static_cast<float>(aValue.a2),
+		static_cast<float>(aValue.b2),
+		static_cast<float>(aValue.c2),
+		static_cast<float>(aValue.d2),
+		static_cast<float>(aValue.a3),
+		static_cast<float>(aValue.b3),
+		static_cast<float>(aValue.c3),
+		static_cast<float>(aValue.d3),
+		static_cast<float>(aValue.a4),
+		static_cast<float>(aValue.b4),
+		static_cast<float>(aValue.c4),
+		static_cast<float>(aValue.d4)
 	);
 }

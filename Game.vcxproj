@@ -193,6 +193,7 @@
     <None Include="packages.config" />
     <None Include="Shader\Gizmos.hlsli" />
     <None Include="Shader\Phong.hlsli" />
+    <None Include="Shader\Skinning.hlsli" />
     <None Include="Shader\Sprite.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

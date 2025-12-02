@@ -21,16 +21,21 @@ private:
 	{
 		DirectX::XMFLOAT4X4 viewProjection;
 	};
+	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
+
 	struct CbMesh
 	{
 		DirectX::XMFLOAT4 materialColor;
-		DirectX::XMFLOAT4X4 worldTransform;
 	};
+	Microsoft::WRL::ComPtr<ID3D11Buffer> meshConstantBuffer;
+
+	struct CbSkeleton
+	{
+		DirectX::XMFLOAT4X4 boneTransforms[256];
+	};
+	Microsoft::WRL::ComPtr<ID3D11Buffer> skeletonConstantBuffer;
 
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
-
-	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> meshConstantBuffer;
 };

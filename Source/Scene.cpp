@@ -238,7 +238,8 @@ ModelTestScene::ModelTestScene()
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.0.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.2.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
-	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
+	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
+	model = std::make_unique<Model>(device, "Data/Model/Cube/cube.004.fbx");
 
 	cameraController.SyncCameraToController(camera);
 }

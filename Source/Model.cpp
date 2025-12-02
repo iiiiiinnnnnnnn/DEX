@@ -66,6 +66,13 @@ Model::Model(ID3D11Device* device, const char* filename)
 		// メッシュデータからアクセスしやすいようにマテリアルのポインタを保持する
 		mesh.material = &materials.at(mesh.materialIndex);
 
+		// ボーン構築
+		for (Bone& bone : mesh.bones)
+		{
+			// 参照ノード設定
+			bone.node = &nodes.at(bone.nodeIndex);
+		}
+
 		// 頂点バッファ
 		{
 			D3D11_BUFFER_DESC bufferDesc = {};

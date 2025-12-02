@@ -5,10 +5,13 @@
 PhongShader::PhongShader(ID3D11Device* device)
 {
 	// 入力レイアウト
+	// 入力レイアウト
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BONE_WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BONE_INDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	// 頂点シェーダー
@@ -37,6 +40,12 @@ PhongShader::PhongShader(ID3D11Device* device)
 		device,
 		sizeof(CbMesh),
 		meshConstantBuffer.GetAddressOf());
+
+	// スケルトン用定数バッファ
+	GpuResourceUtils::CreateConstantBuffer(
+		device,
+		sizeof(CbSkeleton),
+		skeletonConstantBuffer.GetAddressOf());
 }
 // 描画開始
 void PhongShader::Begin(const RenderContext& rc)
@@ -53,6 +62,7 @@ void PhongShader::Begin(const RenderContext& rc)
 	{
 		sceneConstantBuffer.Get(),
 		meshConstantBuffer.Get(),
+		skeletonConstantBuffer.Get(),
 	};
 	rc.deviceContext->VSSetConstantBuffers(0, _countof(constantBuffers), constantBuffers);
 	rc.deviceContext->PSSetConstantBuffers(0, _countof(constantBuffers), constantBuffers);
@@ -96,8 +106,26 @@ void PhongShader::Draw(const RenderContext& rc, const Model* model)
 		// メッシュ用定数バッファ更新
 		CbMesh cbMesh{};
 		cbMesh.materialColor = mesh.material->color;
-		cbMesh.worldTransform = mesh.node->worldTransform;
 		dc->UpdateSubresource(meshConstantBuffer.Get(), 0, 0, &cbMesh, 0, 0);
+
+		// スケルトン用定数バッファ更新
+		CbSkeleton cbSkeleton{};
+		if (mesh.bones.size() > 0)
+		{
+			for (size_t i = 0; i < mesh.bones.size(); ++i)
+			{
+				const Model::Bone& bone = mesh.bones.at(i);
+				DirectX::XMMATRIX WorldTransform = DirectX::XMLoadFloat4x4(&bone.node->worldTransform);
+				DirectX::XMMATRIX OffsetTransform = DirectX::XMLoadFloat4x4(&bone.offsetTransform);
+				DirectX::XMMATRIX BoneTransform = OffsetTransform * WorldTransform;
+				DirectX::XMStoreFloat4x4(&cbSkeleton.boneTransforms[i], BoneTransform);
+			}
+		}
+		else
+		{
+			cbSkeleton.boneTransforms[0] = mesh.node->worldTransform;
+		}
+		rc.deviceContext->UpdateSubresource(skeletonConstantBuffer.Get(), 0, 0, &cbSkeleton, 0, 0);
 
 		// シェーダーリソースビュー設定
 		dc->PSSetShaderResources(0, 1, mesh.material->diffuseMap.GetAddressOf());

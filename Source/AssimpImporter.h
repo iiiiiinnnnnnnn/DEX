@@ -38,6 +38,8 @@ private:
 	static DirectX::XMFLOAT2 AssimpImporter::aiVector3DToXMFLOAT2(const aiVector3D& aValue);
 	// aiQuaternion Å® XMFLOAT4
 	static DirectX::XMFLOAT4 aiQuaternionToXMFLOAT4(const aiQuaternion& aValue);
+	// aiMatrix4x4 Å® XMFLOAT4X4
+	static DirectX::XMFLOAT4X4 aiMatrix4x4ToXMFLOAT4X4(const aiMatrix4x4& aValue);
 
 private:
 	Assimp::Importer aImporter;

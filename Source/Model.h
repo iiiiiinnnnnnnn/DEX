@@ -14,6 +14,8 @@ public:
 	struct Vertex
 	{
 		DirectX::XMFLOAT3 position = { 0, 0, 0 };
+		DirectX::XMFLOAT4 boneWeight = { 1, 0, 0, 0 };
+		DirectX::XMUINT4 boneIndex = { 0, 0, 0, 0 };
 		DirectX::XMFLOAT2 texcoord = { 0, 0 };
 	};
 
@@ -39,6 +41,13 @@ public:
 		std::vector<Node*> children;
 	};
 
+	struct Bone
+	{
+		int nodeIndex;
+		DirectX::XMFLOAT4X4 offsetTransform;
+		Node* node = nullptr;
+	};
+
 	struct Mesh
 	{
 		std::vector<Vertex> vertices;
@@ -49,6 +58,7 @@ public:
 		Material* material = nullptr;
 		int nodeIndex = 0;
 		Node* node = nullptr;
+		std::vector<Bone> bones;
 	};
 
 	// ルートノード取得

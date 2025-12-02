@@ -10,5 +10,4 @@ cbuffer CbScene : register(b0)
 cbuffer CbMesh : register(b1)
 {
     float4 materialColor;
-    row_major float4x4 worldTransform;
 };
