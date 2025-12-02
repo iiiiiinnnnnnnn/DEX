@@ -244,7 +244,7 @@ RenderState::RenderState(ID3D11Device* device)
 	// ベタ塗り＆裏面カリング
 	{
 		D3D11_RASTERIZER_DESC desc{};
-		desc.FrontCounterClockwise = false;
+		desc.FrontCounterClockwise = true;
 		desc.DepthBias = 0;
 		desc.DepthBiasClamp = 0;
 		desc.SlopeScaledDepthBias = 0;
@@ -262,7 +262,7 @@ RenderState::RenderState(ID3D11Device* device)
 	// ワイヤーフレーム＆カリングなし
 	{
 		D3D11_RASTERIZER_DESC desc{};
-		desc.FrontCounterClockwise = false;
+		desc.FrontCounterClockwise = true;
 		desc.DepthBias = 0;
 		desc.DepthBiasClamp = 0;
 		desc.SlopeScaledDepthBias = 0;
@@ -280,7 +280,7 @@ RenderState::RenderState(ID3D11Device* device)
 	// ワイヤーフレーム＆裏面カリング
 	{
 		D3D11_RASTERIZER_DESC desc{};
-		desc.FrontCounterClockwise = false;
+		desc.FrontCounterClockwise = true;
 		desc.DepthBias = 0;
 		desc.DepthBiasClamp = 0;
 		desc.SlopeScaledDepthBias = 0;

@@ -240,9 +240,8 @@ ModelTestScene::ModelTestScene()
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.001.1.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.003.1.fbx");
 	//model = std::make_unique<Model>(device, "Data/Model/Cube/cube.004.fbx");
-	model = std::make_unique<Model>(device, "Data/Model/Plantune/plantune.fbx");
+	model = std::make_unique<Model>(device, "Data/Model/Plantune/plantune.fbx", 0.01f);
 	model->PlayAnimation(0, true);
-	scale.x = scale.y = scale.z = 0.01f;
 
 	cameraController.SyncCameraToController(camera);
 }

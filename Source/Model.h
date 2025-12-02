@@ -9,7 +9,7 @@
 class Model
 {
 public:
-	Model(ID3D11Device* device, const char* filename);
+	Model(ID3D11Device* device, const char* filename, float scaling = 1.0f);
 
 	struct Vertex
 	{
@@ -36,6 +36,7 @@ public:
 		DirectX::XMFLOAT3 scale;
 
 		DirectX::XMFLOAT4X4 localTransform;
+		DirectX::XMFLOAT4X4 globalTransform;
 		DirectX::XMFLOAT4X4 worldTransform;
 		Node* parent = nullptr;
 		std::vector<Node*> children;
@@ -139,4 +140,6 @@ private:
 	float currentAnimationBlendSeconds = 0.0f;
 	float animationBlendSecondsLength = -1.0f;
 	bool animationBlending = false;
+
+	float scaling = 1.0f;
 };

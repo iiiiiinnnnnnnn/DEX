@@ -5,7 +5,8 @@
 #include "GpuResourceUtils.h"
 
 // コンストラクタ
-Model::Model(ID3D11Device* device, const char* filename)
+Model::Model(ID3D11Device* device, const char* filename, float scaling)
+	: scaling(scaling)
 {
 	std::filesystem::path filepath(filename);
 	std::filesystem::path dirpath(filepath.parent_path()); // ディレクトリパスを取得
@@ -118,6 +119,11 @@ Model::Model(ID3D11Device* device, const char* filename)
 // トランスフォーム更新処理
 void Model::UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform)
 {
+	DirectX::XMMATRIX ParentWorldTransform = DirectX::XMLoadFloat4x4(&worldTransform);
+
+	// 右手座標系から左手座標系へ変換する行列
+	DirectX::XMMATRIX CoordinateSystemTransform = DirectX::XMMatrixScaling(-scaling, scaling, scaling);
+
 	for (Node& node : nodes)
 	{
 		// ローカル行列算出
@@ -126,20 +132,24 @@ void Model::UpdateTransform(const DirectX::XMFLOAT4X4& worldTransform)
 		DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(node.position.x, node.position.y, node.position.z);
 		DirectX::XMMATRIX LocalTransform = S * R * T;
 
-		// ワールド行列算出
-		DirectX::XMMATRIX ParentWorldTransform;
+		// グローバル行列算出
+		DirectX::XMMATRIX ParentGlobalTransform;
 		if (node.parent != nullptr)
 		{
-			ParentWorldTransform = DirectX::XMLoadFloat4x4(&node.parent->worldTransform);
+			ParentGlobalTransform = DirectX::XMLoadFloat4x4(&node.parent->globalTransform);
 		}
 		else
 		{
-			ParentWorldTransform = DirectX::XMLoadFloat4x4(&worldTransform);
+			ParentGlobalTransform = DirectX::XMMatrixIdentity();
 		}
-		DirectX::XMMATRIX WorldTransform = LocalTransform * ParentWorldTransform;
+		DirectX::XMMATRIX GlobalTransform = LocalTransform * ParentGlobalTransform;
+
+		// ワールド行列算出
+		DirectX::XMMATRIX WorldTransform = GlobalTransform * CoordinateSystemTransform * ParentWorldTransform;
 
 		// 計算結果を格納
 		DirectX::XMStoreFloat4x4(&node.localTransform, LocalTransform);
+		DirectX::XMStoreFloat4x4(&node.globalTransform, GlobalTransform);
 		DirectX::XMStoreFloat4x4(&node.worldTransform, WorldTransform);
 	}
 }
