@@ -20,6 +20,9 @@ private:
 	struct CbScene
 	{
 		DirectX::XMFLOAT4X4 viewProjection;
+		DirectX::XMFLOAT4 lightDirection;
+		DirectX::XMFLOAT4 lightColor;
+		DirectX::XMFLOAT4 cameraPosition;
 	};
 	Microsoft::WRL::ComPtr<ID3D11Buffer> sceneConstantBuffer;
 

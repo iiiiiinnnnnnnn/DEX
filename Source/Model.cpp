@@ -54,6 +54,22 @@ Model::Model(ID3D11Device* device, const char* filename, float scaling)
 				material.diffuseMap.GetAddressOf());
 			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
 		}
+
+		if (material.normalTextureFileName.empty())
+		{
+			// 法線ベクトルが(0,0,1)になるダミーテクスチャを作成
+			HRESULT hr = GpuResourceUtils::CreateDummyTexture(device, 0xFFFF7F7F,
+				material.normalMap.GetAddressOf());
+			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		}
+		else
+		{
+			// 法線テクスチャ読み込み
+			std::filesystem::path texturePath(dirpath / material.normalTextureFileName);
+			HRESULT hr = GpuResourceUtils::LoadTexture(device, texturePath.string().c_str(),
+				material.normalMap.GetAddressOf());
+			_ASSERT_EXPR(SUCCEEDED(hr), HRTrace(hr));
+		}
 	}
 
 	// メッシュ構築

@@ -23,7 +23,9 @@ AssimpImporter::AssimpImporter(const char* filename)
 	// インポート時のオプションフラグ
 	uint32_t aFlags = aiProcess_Triangulate // 多角形を三角形化する
 		| aiProcess_JoinIdenticalVertices // 重複頂点をマージする
-		| aiProcess_PopulateArmatureData; // ボーンの参照データを取得できるようにする
+		| aiProcess_LimitBoneWeights // １頂点の最大ボーン影響数を制限する
+		| aiProcess_PopulateArmatureData // ボーンの参照データを取得できるようにする
+		| aiProcess_CalcTangentSpace; // 接線を計算する
 
 	// ファイル読み込み
 	aScene = aImporter.ReadFile(filename, aFlags);
@@ -68,6 +70,18 @@ void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes, const a
 				vertex.texcoord = aiVector3DToXMFLOAT2(aMesh->mTextureCoords[0][aVertexIndex]);
 				// OpenGL と DirectX で縦方向のテクスチャ座標が違う。Assimp は OpenGL 基準のデータなので変換する
 				vertex.texcoord.y = 1.0f - vertex.texcoord.y;
+			}
+
+			// 法線
+			if (aMesh->HasNormals())
+			{
+				vertex.normal = aiVector3DToXMFLOAT3(aMesh->mNormals[aVertexIndex]);
+			}
+
+			// 接線
+			if (aMesh->HasTangentsAndBitangents())
+			{
+				vertex.tangent = aiVector3DToXMFLOAT3(aMesh->mTangents[aVertexIndex]);
 			}
 		}
 
@@ -240,6 +254,9 @@ void AssimpImporter::LoadMaterials(MaterialList& materials)
 
 		// ディフューズマップ
 		loadTexture(aiTextureType_DIFFUSE, material.diffuseTextureFileName);
+
+		// ノーマルマップ
+		loadTexture(aiTextureType_NORMALS, material.normalTextureFileName);
 	}
 }
 

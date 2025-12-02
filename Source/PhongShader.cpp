@@ -8,10 +8,12 @@ PhongShader::PhongShader(ID3D11Device* device)
 	// 入力レイアウト
 	D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
 	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "BONE_WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "BONE_INDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BONE_WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "BONE_INDICES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 	};
 
 	// 頂点シェーダー
@@ -87,6 +89,19 @@ void PhongShader::Begin(const RenderContext& rc)
 	DirectX::XMMATRIX V = DirectX::XMLoadFloat4x4(&rc.camera->GetView());
 	DirectX::XMMATRIX P = DirectX::XMLoadFloat4x4(&rc.camera->GetProjection());
 	DirectX::XMStoreFloat4x4(&cbScene.viewProjection, V * P);
+
+	const DirectionalLight& directionalLight = rc.lightManager->GetDirectionalLight();
+	cbScene.lightDirection.x = directionalLight.direction.x;
+	cbScene.lightDirection.y = directionalLight.direction.y;
+	cbScene.lightDirection.z = directionalLight.direction.z;
+	cbScene.lightColor.x = directionalLight.color.x;
+	cbScene.lightColor.y = directionalLight.color.y;
+	cbScene.lightColor.z = directionalLight.color.z;
+
+	const DirectX::XMFLOAT3& eye = rc.camera->GetEye();
+	cbScene.cameraPosition.x = eye.x;
+	cbScene.cameraPosition.y = eye.y;
+	cbScene.cameraPosition.z = eye.z;
 	dc->UpdateSubresource(sceneConstantBuffer.Get(), 0, 0, &cbScene, 0, 0);
 }
 
@@ -129,6 +144,14 @@ void PhongShader::Draw(const RenderContext& rc, const Model* model)
 
 		// シェーダーリソースビュー設定
 		dc->PSSetShaderResources(0, 1, mesh.material->diffuseMap.GetAddressOf());
+
+		// シェーダーリソースビュー設定
+		ID3D11ShaderResourceView* srvs[] =
+		{
+			mesh.material->diffuseMap.Get(),
+			mesh.material->normalMap.Get(),
+		};
+		dc->PSSetShaderResources(0, _countof(srvs), srvs);
 
 		// 描画
 		dc->DrawIndexed(static_cast<UINT>(mesh.indices.size()), 0, 0);

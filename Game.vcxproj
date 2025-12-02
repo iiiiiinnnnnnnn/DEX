@@ -129,6 +129,7 @@
     <ClInclude Include="Source\Graphics.h" />
     <ClInclude Include="Source\HighResolutionTimer.h" />
     <ClInclude Include="Source\ImGuiRenderer.h" />
+    <ClInclude Include="Source\Light.h" />
     <ClInclude Include="Source\Misc.h" />
     <ClInclude Include="Source\Model.h" />
     <ClInclude Include="Source\PhongShader.h" />

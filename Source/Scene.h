@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "FreeCameraController.h"
 #include "Model.h"
+#include "Light.h"
 
 // ƒV[ƒ“Šî’ê
 class Scene
@@ -115,4 +116,6 @@ private:
 
 	bool animationLoop = false;
 	float animationBlendSeconds = 0.2f;
+
+	LightManager lightManager;
 };

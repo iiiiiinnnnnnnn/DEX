@@ -244,6 +244,12 @@ ModelTestScene::ModelTestScene()
 	model->PlayAnimation(0, true);
 
 	cameraController.SyncCameraToController(camera);
+
+	// ƒ‰ƒCƒgİ’è
+	DirectionalLight directionalLight;
+	directionalLight.direction = { 1, -1, 0 };
+	directionalLight.color = { 1, 1, 1 };
+	lightManager.SetDirectionalLight(directionalLight);
 }
 
 // •`‰æˆ—
@@ -271,6 +277,7 @@ void ModelTestScene::Render(float elapsedTime)
 	rc.camera = &camera;
 	rc.deviceContext = Graphics::Instance().GetDeviceContext();
 	rc.renderState = Graphics::Instance().GetRenderState();
+	rc.lightManager = &lightManager;
 
 	// •`‰æ
 	Shader* shader = Graphics::Instance().GetShader(ShaderId::Phong);

@@ -11,20 +11,25 @@ class Model
 public:
 	Model(ID3D11Device* device, const char* filename, float scaling = 1.0f);
 
+	struct Material
+	{
+		std::string name;
+		std::string diffuseTextureFileName;
+		std::string normalTextureFileName;
+
+		DirectX::XMFLOAT4 color = { 1, 1, 1, 1 };
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseMap;
+		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> normalMap;
+	};
+
 	struct Vertex
 	{
 		DirectX::XMFLOAT3 position = { 0, 0, 0 };
 		DirectX::XMFLOAT4 boneWeight = { 1, 0, 0, 0 };
 		DirectX::XMUINT4 boneIndex = { 0, 0, 0, 0 };
 		DirectX::XMFLOAT2 texcoord = { 0, 0 };
-	};
-
-	struct Material
-	{
-		std::string name;
-		std::string diffuseTextureFileName;
-		DirectX::XMFLOAT4 color = { 1, 1, 1, 1 };
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> diffuseMap;
+		DirectX::XMFLOAT3 normal = { 0, 0, 0 };
+		DirectX::XMFLOAT3 tangent = { 0, 0, 0 };
 	};
 
 	struct Node
