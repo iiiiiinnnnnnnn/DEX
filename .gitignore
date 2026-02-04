@@ -365,3 +365,4 @@ FodyWeavers.xsd
 # Shader file
 *.cso
 *.cod
+/Game.exe
