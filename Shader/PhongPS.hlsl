@@ -105,9 +105,9 @@ float4 main(VS_OUT pin) : SV_TARGET
         float2(shadowTexelSize, shadowTexelSize) // ‰E‰º
     };
     [unroll]
-    for (int i = 0; i < 9; ++i)
+    for (int k = 0; k < 9; ++k)
     {
-        shadowFactor += shadowMap.SampleCmpLevelZero(shadowSampler, pin.shadow.xy + shadowTexelOffsets[i],
+        shadowFactor += shadowMap.SampleCmpLevelZero(shadowSampler, pin.shadow.xy + shadowTexelOffsets[k],
             pin.shadow.z - shadowBias).r;
     }
     shadowFactor /= 9.0f;

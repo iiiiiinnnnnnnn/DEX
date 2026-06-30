@@ -385,6 +385,12 @@
     <FxCompile Include="Shader\GizmosVS.hlsl">
       <Filter>Shader\Gizmos</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\PhongPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\PhongVS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
     <FxCompile Include="ModelVS.hlsl">
       <Filter>Builtin</Filter>
     </FxCompile>
@@ -422,6 +428,9 @@
     </None>
     <None Include="Shader\Gizmos.hlsli">
       <Filter>Shader\Gizmos</Filter>
+    </None>
+    <None Include="Shader\Phong.hlsli">
+      <Filter>Shader</Filter>
     </None>
     <None Include=".gitignore" />
     <None Include="Model.hlsli">

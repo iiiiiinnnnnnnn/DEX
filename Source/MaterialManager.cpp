@@ -1,6 +1,8 @@
+// MaterialManager.cpp
 #include "MaterialManager.h"
 #include <Graphics.h>
 #include <AssetManager.h>
+#include <Logger.h>
 #include "Material.h"
 
 void MaterialManager::Initialize()
@@ -54,7 +56,11 @@ MaterialCache MaterialManager::build(Material& material)
                 psBlob.GetAddressOf(),
                 errorBlob.GetAddressOf()
             );
-            if (hr != S_OK) break;
+            if (hr != S_OK)
+            {
+                if (errorBlob) LOG("%s", static_cast<const char*>(errorBlob->GetBufferPointer()));
+                break;
+            }
 
             // ƒŠƒtƒŒƒNƒVƒ‡ƒ“
             Microsoft::WRL::ComPtr<ID3D11ShaderReflection> reflector;
@@ -95,7 +101,7 @@ MaterialCache MaterialManager::build(Material& material)
                              typeDesc.Columns == 4)
                     {
                         if (std::string(varDesc.Name) != "camera_position") {
-                            cache.reflectedParams.setKey(varDesc.Name, {});
+                            cache.reflectedParams.setKey(varDesc.Name, DirectX::XMFLOAT4(0, 0, 0, 0));
                         }
                     }
 
@@ -208,3 +214,5 @@ void MaterialManager::clearAllCache()
 {
     caches.clear();
 }
+
+

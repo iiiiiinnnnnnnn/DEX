@@ -1,3 +1,4 @@
+// DefinedParameters.h
 #pragma once
 
 #include <d3d11.h>
@@ -27,12 +28,18 @@ public:
     void clearAll() { clearFloats(); clearColors(); clearTextures(); }
 
     void setKey(const std::string& keyname, const float& input) {
+        colors.erase(keyname);
+        textures.erase(keyname);
         floats[keyname] = input;
     }
     void setKey(const std::string& keyname, const DirectX::XMFLOAT4& input) {
+        floats.erase(keyname);
+        textures.erase(keyname);
         colors[keyname] = input;
     }
     void setKey(const std::string& keyname, const TextureBinding& input) {
+        floats.erase(keyname);
+        colors.erase(keyname);
         textures[keyname] = input;
     }
     bool tryGetKey(const std::string& keyname, float* output) {
