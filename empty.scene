@@ -1,0 +1,80 @@
+{
+  "postEffect" : {
+    "luminanceExtractionLowerEdge" : 0.5,
+    "luminanceExtractionHigherEdge" : 1.0,
+    "gaussianSigma" : 10.0,
+    "bloomIntensity" : 5.0
+  },
+  "shadowMap" : {
+    "shadowTexelSize" : 12288
+  },
+  "skyMap" : {
+    "texturePath" : "sky.dds"
+  },
+  "root_objects": [
+    {
+      "children": [],
+      "components": [
+        {
+          "color": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "hash": 11740401907122218874,
+          "intensity": 0.5
+        }
+      ],
+      "name": "Directional Light",
+      "transform": {
+        "p": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          -0.7071067690849304,
+          0.0,
+          0.0,
+          0.7071067094802856
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "children": [],
+      "components": [
+        {
+          "aspect": 1.7777777910232544,
+          "farZ": 1000.0,
+          "fovY": 0.7853981852531433,
+          "hash": 18089348015622775616,
+          "nearZ": 0.10000000149011612
+        }
+      ],
+      "name": "Camera1",
+      "transform": {
+        "p": [
+          0.0,
+          2.0,
+          10.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}

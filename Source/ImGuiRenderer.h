@@ -1,7 +1,6 @@
 #pragma once
 
-#include <Windows.h>
-#include <d3d11.h>
+#include "Common.h"
 
 class ImGuiRenderer
 {
@@ -20,4 +19,13 @@ public:
 
 	// WIN32メッセージハンドラー
 	static LRESULT HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+	// フォントSRV取得
+	static ID3D11ShaderResourceView* GetFontSRV();
+
+	static ImFont* GetBillboardFont();
+
+private:
+	static ID3D11ShaderResourceView* fontSRV;
+	static ImFont* billboardFont;
 };

@@ -1,0 +1,517 @@
+#include <fstream>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+#include "Misc.h"
+#include "AssimpImporter.h"
+
+// コンストラクタ
+AssimpImporter::AssimpImporter(const char* filename)
+	: filepath(filename)
+{
+	// 拡張子取得
+	std::string extension = filepath.extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(), tolower); // 小文字化
+
+	// FBXファイルの場合は特殊なインポートオプション設定をする
+	if (extension == ".fbx")
+	{
+		// $AssimpFBX$が付加された余計なノードを作成してしまうのを抑制する
+		aImporter.SetPropertyInteger(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
+	}
+
+	// インポート時のオプションフラグ
+	uint32_t aFlags = aiProcess_Triangulate // 多角形を三角形化する
+		| aiProcess_JoinIdenticalVertices // 重複頂点をマージする
+		| aiProcess_LimitBoneWeights // １頂点の最大ボーン影響数を制限する
+		| aiProcess_PopulateArmatureData // ボーンの参照データを取得できるようにする
+		| aiProcess_CalcTangentSpace; // 接線を計算する
+
+	// ファイル読み込み
+	aScene = aImporter.ReadFile(filename, aFlags);
+	_ASSERT_EXPR_A(aScene, aImporter.GetErrorString());
+}
+
+// メッシュデータを読み込み
+void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes)
+{
+	LoadMeshes(meshes, nodes, aScene->mRootNode);
+}
+void AssimpImporter::LoadMeshes(MeshList& meshes, const NodeList& nodes, const aiNode* aNode)
+{
+	const aiMesh* aMesh = aScene->mMeshes[0];
+
+	// メッシュデータ読み取り
+	for (uint32_t aMeshIndex = 0; aMeshIndex < aNode->mNumMeshes; ++aMeshIndex)
+	{
+		const aiMesh* aMesh = aScene->mMeshes[aNode->mMeshes[aMeshIndex]];
+
+		// メッシュデータ格納
+		Model::Mesh& mesh = meshes.emplace_back();
+		mesh.name = aMesh->mName.C_Str();
+		mesh.nodeIndex = nodeIndexMap[aNode];
+		mesh.vertices.resize(aMesh->mNumVertices);
+		mesh.indices.resize(aMesh->mNumFaces * 3);
+		mesh.materialIndex = static_cast<int>(aMesh->mMaterialIndex);
+
+		// 頂点データ
+		for (uint32_t aVertexIndex = 0; aVertexIndex < aMesh->mNumVertices; ++aVertexIndex)
+		{
+			Model::Vertex& vertex = mesh.vertices.at(aVertexIndex);
+
+			// 位置
+			if (aMesh->HasPositions())
+			{
+				vertex.position = aiVector3DToXMFLOAT3(aMesh->mVertices[aVertexIndex]);
+			}
+
+			// テクスチャ座標
+			if (aMesh->HasTextureCoords(0))
+			{
+				vertex.texcoord = aiVector3DToXMFLOAT2(aMesh->mTextureCoords[0][aVertexIndex]);
+				// OpenGL と DirectX で縦方向のテクスチャ座標が違う。Assimp は OpenGL 基準のデータなので変換する
+				vertex.texcoord.y = 1.0f - vertex.texcoord.y;
+			}
+
+			// 法線
+			if (aMesh->HasNormals())
+			{
+				vertex.normal = aiVector3DToXMFLOAT3(aMesh->mNormals[aVertexIndex]);
+			}
+
+			// 接線
+			if (aMesh->HasTangentsAndBitangents())
+			{
+				DirectX::XMFLOAT3 a = aiVector3DToXMFLOAT3(aMesh->mTangents[aVertexIndex]);;
+				vertex.tangent.x = a.x;
+				vertex.tangent.y = a.y;
+				vertex.tangent.z = a.z;
+			}
+		}
+
+		// インデックスデータ
+		for (uint32_t aFaceIndex = 0; aFaceIndex < aMesh->mNumFaces; ++aFaceIndex)
+		{
+			const aiFace& aFace = aMesh->mFaces[aFaceIndex];
+			uint32_t index = aFaceIndex * 3;
+			mesh.indices[index + 0] = aFace.mIndices[0];
+			mesh.indices[index + 1] = aFace.mIndices[1];
+			mesh.indices[index + 2] = aFace.mIndices[2];
+		}
+
+		// スキニングデータ
+		if (aMesh->mNumBones > 0)
+		{
+			// ボーン影響力データ
+			struct BoneInfluence
+			{
+				uint32_t indices[4] = { 0, 0, 0, 0 };
+				float weights[4] = { 1, 0, 0, 0 };
+				int useCount = 0;
+				void Add(uint32_t index, float weight)
+				{
+					if (useCount >= 4) return;
+					for (int i = 0; i < useCount; ++i)
+					{
+						if (indices[i] == index)
+						{
+							return;
+						}
+					}
+					indices[useCount] = index;
+					weights[useCount] = weight;
+					useCount++;
+				}
+			};
+			std::vector<BoneInfluence> boneInfluences;
+			boneInfluences.resize(aMesh->mNumVertices);
+
+			// メッシュに影響するボーンデータを収集する
+			for (uint32_t aBoneIndex = 0; aBoneIndex < aMesh->mNumBones; ++aBoneIndex)
+			{
+				const aiBone* aBone = aMesh->mBones[aBoneIndex];
+
+				// 頂点影響力データを抽出
+				for (uint32_t aWightIndex = 0; aWightIndex < aBone->mNumWeights; ++aWightIndex)
+				{
+					const aiVertexWeight& aWeight = aBone->mWeights[aWightIndex];
+					BoneInfluence& boneInfluence = boneInfluences.at(aWeight.mVertexId);
+					boneInfluence.Add(aBoneIndex, aWeight.mWeight);
+				}
+
+				// ボーンデータ取得
+				Model::Bone& bone = mesh.bones.emplace_back();
+				bone.nodeIndex = nodeIndexMap[aBone->mNode];
+				bone.offsetTransform = aiMatrix4x4ToXMFLOAT4X4(aBone->mOffsetMatrix);
+			}
+
+			// 頂点影響力データを格納
+			for (size_t vertexIndex = 0; vertexIndex < mesh.vertices.size(); ++vertexIndex)
+			{
+				Model::Vertex& vertex = mesh.vertices.at(vertexIndex);
+				BoneInfluence& boneInfluence = boneInfluences.at(vertexIndex);
+				vertex.bone_weights[0] = boneInfluence.weights[0];
+				vertex.bone_weights[1] = boneInfluence.weights[1];
+				vertex.bone_weights[2] = boneInfluence.weights[2];
+				vertex.bone_weights[3] = boneInfluence.weights[3];
+				vertex.bone_indices[0] = boneInfluence.indices[0];
+				vertex.bone_indices[1] = boneInfluence.indices[1];
+				vertex.bone_indices[2] = boneInfluence.indices[2];
+				vertex.bone_indices[3] = boneInfluence.indices[3];
+			}
+		}
+	}
+
+	// 再帰的に子ノードを処理する
+	for (uint32_t aNodeIndex = 0; aNodeIndex < aNode->mNumChildren; ++aNodeIndex)
+	{
+		LoadMeshes(meshes, nodes, aNode->mChildren[aNodeIndex]);
+	}
+}
+
+// マテリアルデータを読み込み
+void AssimpImporter::LoadMaterials(std::filesystem::path dirpath, MaterialList& materials)
+{
+	materials.resize(aScene->mNumMaterials);
+
+	for (uint32_t i = 0; i < aScene->mNumMaterials; ++i)
+	{
+		const aiMaterial* aMat = aScene->mMaterials[i];
+		Material& mat = materials[i];
+
+		// 名前
+		aiString aiName;
+		aMat->Get(AI_MATKEY_NAME, aiName);
+		mat.name = aiName.C_Str();
+		mat.SetDefaultShader();
+
+		// カラー
+		aiColor4D col{};
+		if (AI_SUCCESS == aMat->Get(AI_MATKEY_COLOR_DIFFUSE, col))
+		{
+			// AssimpのcolはsRGBなので、Linearに変換して保存
+			DirectX::XMFLOAT4 linearColor = {
+				std::pow(col.r, 2.2f),
+				std::pow(col.g, 2.2f),
+				std::pow(col.b, 2.2f),
+				col.a
+			};
+
+			mat.saveParams.setKey("diffuseColor", linearColor);
+		}
+		if (AI_SUCCESS == aMat->Get(AI_MATKEY_COLOR_EMISSIVE, col))
+		{
+			// AssimpのcolはsRGBなので、Linearに変換して保存
+			DirectX::XMFLOAT4 linearColor = {
+				std::pow(col.r, 2.2f),
+				std::pow(col.g, 2.2f),
+				std::pow(col.b, 2.2f),
+				col.a
+			};
+
+			if (col.r != 0.0f || col.g != 0.0f || col.b != 0.0f)
+				mat.saveParams.setKey("emissiveColor", linearColor);
+		}
+
+		// テクスチャ読み込みラムダ
+		auto loadTexture = [&](aiTextureType aTextureType, const std::string& keyName)
+			{
+				aiString aTextureFilePath;
+				if (AI_SUCCESS == aMat->GetTexture(aTextureType, 0, &aTextureFilePath))
+				{
+					const aiTexture* aTexture = aScene->GetEmbeddedTexture(aTextureFilePath.C_Str());
+					std::filesystem::path textureFilePath(aTextureFilePath.C_Str());
+
+					if (aTexture != nullptr)
+					{
+						// ファイル名が不明ならマテリアル名＋タイプ名＋拡張子で生成
+						if (!textureFilePath.empty() && textureFilePath.string()[0] == '*')
+						{
+							textureFilePath = RemoveInvalidFileChars(aiName.C_Str()) + "_" + aiTextureTypeToString(aTextureType)
+								+ "." + aTexture->achFormatHint;
+						}
+						textureFilePath = textureFilePath.filename();
+
+						// 出力ディレクトリ作成
+						std::filesystem::path outputDirPath(dirpath / textureFilePath.parent_path());
+						if (!std::filesystem::exists(outputDirPath))
+							std::filesystem::create_directories(outputDirPath);
+
+						// 一旦バイナリで保存（mHeight == 0 の場合でも DDS に変換可能に）
+						std::filesystem::path tempFilePath = outputDirPath / textureFilePath;
+						{
+							std::ofstream os(tempFilePath, std::ios::binary);
+							if (aTexture->mHeight == 0)
+							{
+								os.write(reinterpret_cast<char*>(aTexture->pcData), aTexture->mWidth);
+							}
+							else
+							{
+								// 画像データもそのまま書き込む（RGBA等の生データ）
+								os.write(reinterpret_cast<char*>(aTexture->pcData), aTexture->mWidth * aTexture->mHeight * 4);
+							}
+						}
+
+						// DDS に変換
+						auto ddsFilePath = tempFilePath;
+						ddsFilePath.replace_extension(".dds");
+						GpuResourceUtils::ConvertToDDS(tempFilePath.c_str(), ddsFilePath.c_str());
+
+						// 元ファイルは削除
+						if (std::filesystem::exists(tempFilePath))
+							std::filesystem::remove(tempFilePath);
+
+						// パラメーターにセット
+						DefinedParameters::TextureBinding binding;
+						binding.slot = -1;
+						binding.path = ddsFilePath.string();
+						mat.saveParams.setKey(keyName, binding);
+					}
+					else
+					{
+						// 外部テクスチャの場合も DDS に変換
+						auto ddsFilePath = textureFilePath;
+						ddsFilePath.replace_extension(".dds");
+						GpuResourceUtils::ConvertToDDS(textureFilePath.c_str(), ddsFilePath.c_str());
+
+						// パラメーターにセット
+						DefinedParameters::TextureBinding binding;
+						binding.slot = -1;
+						binding.path = ddsFilePath.string();
+						mat.saveParams.setKey(keyName, binding);
+					}
+				}
+			};
+
+		// ディレクトリ無い場合は作る
+		if (!std::filesystem::exists(dirpath))
+			std::filesystem::create_directory(dirpath);
+
+		loadTexture(aiTextureType_DIFFUSE, "diffuseMap");
+		loadTexture(aiTextureType_NORMALS, "normalMap");
+		loadTexture(aiTextureType_EMISSIVE, "emissiveMap");
+		loadTexture(aiTextureType_HEIGHT, "heightMap");
+	}
+}
+
+// ノードデータを読み込み
+void AssimpImporter::LoadNodes(NodeList& nodes)
+{
+	// 先頭のノードから順に処理していく
+	LoadNodes(nodes, aScene->mRootNode, -1);
+}
+
+// ノードデータを再帰読み込み
+void AssimpImporter::LoadNodes(NodeList& nodes, const aiNode* aNode, int parentIndex)
+{
+	// aiNode*からModel::Nodeのインデックスを取得できるようにする
+	std::map<const aiNode*, int>::iterator it = nodeIndexMap.find(aNode);
+	if (it == nodeIndexMap.end())
+	{
+		nodeIndexMap[aNode] = static_cast<int>(nodes.size());
+	}
+
+	// トランスフォームデータ取り出し
+	aiVector3D aScale, aPosition;
+	aiQuaternion aRotation;
+	aNode->mTransformation.Decompose(aScale, aRotation, aPosition);
+
+	// ノードデータ格納
+	Model::Node& node = nodes.emplace_back();
+	node.name = aNode->mName.C_Str();
+	node.parentIndex = parentIndex;
+	node.scale = aiVector3DToXMFLOAT3(aScale);
+	node.rotation = aiQuaternionToXMFLOAT4(aRotation);
+	node.position = aiVector3DToXMFLOAT3(aPosition);
+	parentIndex = static_cast<int>(nodes.size() - 1);
+
+	// 再帰的に子ノードを処理する
+	for (uint32_t aNodeIndex = 0; aNodeIndex < aNode->mNumChildren; ++aNodeIndex)
+	{
+		LoadNodes(nodes, aNode->mChildren[aNodeIndex], parentIndex);
+	}
+}
+
+// アニメーションデータを読み込み
+void AssimpImporter::LoadAnimations(AnimationList& animations, const NodeList& nodes)
+{
+	for (uint32_t aAnimationIndex = 0; aAnimationIndex < aScene->mNumAnimations; ++aAnimationIndex)
+	{
+		const aiAnimation* aAnimation = aScene->mAnimations[aAnimationIndex];
+		Model::Animation& animation = animations.emplace_back();
+
+		// アニメーション情報
+		animation.name = aAnimation->mName.C_Str();
+		animation.secondsLength = static_cast<float>(aAnimation->mDuration / aAnimation->mTicksPerSecond);
+
+		// ノード毎のアニメーション
+		animation.nodeAnims.resize(nodes.size());
+		for (uint32_t aChannelIndex = 0; aChannelIndex < aAnimation->mNumChannels; ++aChannelIndex)
+		{
+			const aiNodeAnim* aNodeAnim = aAnimation->mChannels[aChannelIndex];
+			int nodeIndex = GetNodeIndex(nodes, aNodeAnim->mNodeName.C_Str());
+			if (nodeIndex < 0) continue;
+			const Model::Node& node = nodes.at(nodeIndex);
+			Model::NodeAnim& nodeAnim = animation.nodeAnims.at(nodeIndex);
+
+			// 位置
+			for (uint32_t aPositionIndex = 0; aPositionIndex < aNodeAnim->mNumPositionKeys; ++aPositionIndex)
+			{
+				const aiVectorKey& aKey = aNodeAnim->mPositionKeys[aPositionIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiVector3DToXMFLOAT3(aKey.mValue);
+			}
+
+			// 回転
+			for (uint32_t aRotationIndex = 0; aRotationIndex < aNodeAnim->mNumRotationKeys; ++aRotationIndex)
+			{
+				const aiQuatKey& aKey = aNodeAnim->mRotationKeys[aRotationIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiQuaternionToXMFLOAT4(aKey.mValue);
+			}
+
+			// スケール
+			for (uint32_t aScalingIndex = 0; aScalingIndex < aNodeAnim->mNumScalingKeys; ++aScalingIndex)
+			{
+				const aiVectorKey& aKey = aNodeAnim->mScalingKeys[aScalingIndex];
+
+				// 小数点が存在するフレーム（時間）にゴミデータっぽい場合があるので除外する。
+				if (fabs(std::round(aKey.mTime) - aKey.mTime) > 0.001) continue;
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = static_cast<float>(aKey.mTime / aAnimation->mTicksPerSecond);
+				keyframe.value = aiVector3DToXMFLOAT3(aKey.mValue);
+			}
+		}
+		// アニメーションがなかったノードに対して初期姿勢のキーフレームを追加する
+		for (size_t nodeIndex = 0; nodeIndex < animation.nodeAnims.size(); ++nodeIndex)
+		{
+			const Model::Node& node = nodes.at(nodeIndex);
+			Model::NodeAnim& nodeAnim = animation.nodeAnims.at(nodeIndex);
+
+			// 移動
+			if (nodeAnim.positionKeyframes.size() == 0)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.position;
+			}
+			if (nodeAnim.positionKeyframes.size() == 1)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.positionKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.positionKeyframes.at(0).value;
+			}
+
+			// 回転
+			if (nodeAnim.rotationKeyframes.size() == 0)
+			{
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.rotation;
+			}
+			if (nodeAnim.rotationKeyframes.size() == 1)
+			{
+				Model::QuaternionKeyframe& keyframe = nodeAnim.rotationKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.rotationKeyframes.at(0).value;
+			}
+
+			// スケール
+			if (nodeAnim.scaleKeyframes.size() == 0)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = 0.0f;
+				keyframe.value = node.scale;
+			}
+			if (nodeAnim.scaleKeyframes.size() == 1)
+			{
+				Model::VectorKeyframe& keyframe = nodeAnim.scaleKeyframes.emplace_back();
+				keyframe.seconds = animation.secondsLength;
+				keyframe.value = nodeAnim.scaleKeyframes.at(0).value;
+			}
+		}
+	}
+}
+
+// ノードインデックス取得
+int AssimpImporter::GetNodeIndex(const NodeList& nodes, const char* name)
+{
+	int index = 0;
+	for (const Model::Node& node : nodes)
+	{
+		if (node.name == name)
+		{
+			return index;
+		}
+		index++;
+	}
+	return -1;
+}
+
+// aiVector3D → XMFLOAT3
+DirectX::XMFLOAT3 AssimpImporter::aiVector3DToXMFLOAT3(const aiVector3D & aValue)
+{
+	return DirectX::XMFLOAT3(
+		static_cast<float>(aValue.x),
+		static_cast<float>(aValue.y),
+		static_cast<float>(aValue.z)
+	);
+}
+// aiColor3D → XMFLOAT4
+DirectX::XMFLOAT4 AssimpImporter::AssimpImporter::aiColor3DToXMFLOAT4(const aiColor3D& aValue)
+{
+	return DirectX::XMFLOAT4(
+		static_cast<float>(aValue.r),
+		static_cast<float>(aValue.g),
+		static_cast<float>(aValue.b),
+		1.0f
+	);
+}
+// aiVector3D → XMFLOAT2
+DirectX::XMFLOAT2 AssimpImporter::AssimpImporter::aiVector3DToXMFLOAT2(const aiVector3D& aValue)
+{
+	return DirectX::XMFLOAT2(
+		static_cast<float>(aValue.x),
+		static_cast<float>(aValue.y)
+	);
+}
+// aiQuaternion → XMFLOAT4
+DirectX::XMFLOAT4 AssimpImporter::aiQuaternionToXMFLOAT4(const aiQuaternion& aValue)
+{
+	return DirectX::XMFLOAT4(
+		static_cast<float>(aValue.x),
+		static_cast<float>(aValue.y),
+		static_cast<float>(aValue.z),
+		static_cast<float>(aValue.w)
+	);
+}
+// aiMatrix4x4 → XMFLOAT4X4
+DirectX::XMFLOAT4X4 AssimpImporter::aiMatrix4x4ToXMFLOAT4X4(const aiMatrix4x4& aValue)
+{
+	return DirectX::XMFLOAT4X4(
+		static_cast<float>(aValue.a1),
+		static_cast<float>(aValue.b1),
+		static_cast<float>(aValue.c1),
+		static_cast<float>(aValue.d1),
+		static_cast<float>(aValue.a2),
+		static_cast<float>(aValue.b2),
+		static_cast<float>(aValue.c2),
+		static_cast<float>(aValue.d2),
+		static_cast<float>(aValue.a3),
+		static_cast<float>(aValue.b3),
+		static_cast<float>(aValue.c3),
+		static_cast<float>(aValue.d3),
+		static_cast<float>(aValue.a4),
+		static_cast<float>(aValue.b4),
+		static_cast<float>(aValue.c4),
+		static_cast<float>(aValue.d4)
+	);
+}

@@ -1,0 +1,259 @@
+{
+  "postEffect" : {
+    "luminanceExtractionLowerEdge" : 0.5,
+    "luminanceExtractionHigherEdge" : 1.0,
+    "gaussianSigma" : 10.0,
+    "bloomIntensity" : 5.0
+  },
+  "shadowMap" : {
+    "shadowTexelSize" : 12288
+  },
+  "skyMap" : {
+    "texturePath" : "sky.dds"
+  },
+  "root_objects": [
+    {
+      "children": [
+        {
+          "children": [],
+          "components": [
+            {
+              "color": [
+                1.0,
+                1.0,
+                1.0
+              ],
+              "hash": 11740401907122218874,
+              "intensity": 0
+            }
+          ],
+          "name": "Directional Light",
+          "transform": {
+            "p": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "r": [
+              -0.7071067690849304,
+              0.0,
+              0.0,
+              0.7071067094802856
+            ],
+            "s": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "children": [],
+          "components": [
+            {
+              "color": [
+                1.0,
+                0.699999988079071,
+                0.0
+              ],
+              "hash": 7290932848070918824,
+              "intensity": 1.0,
+              "range": 28.0
+            }
+          ],
+          "name": "Point Light1",
+          "transform": {
+            "p": [
+              0.0,
+              2.0,
+              -6.5
+            ],
+            "r": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "s": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        },
+        {
+          "children": [],
+          "components": [
+            {
+              "color": [
+                1.0,
+                0.699999988079071,
+                0.0
+              ],
+              "hash": 7290932848070918824,
+              "intensity": 1.0,
+              "range": 28.0
+            }
+          ],
+          "name": "Point Light2",
+          "transform": {
+            "p": [
+              0.0,
+              2.0,
+              6.5
+            ],
+            "r": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ],
+            "s": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          }
+        }
+      ],
+      "components": [],
+      "name": "Lights",
+      "transform": {
+        "p": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "children": [],
+      "components": [
+        {
+          "hash": 7481719764336608291,
+          "mdlpath": "Data/Model/liminal/liminal.mdl"
+        }
+      ],
+      "name": "liminal",
+      "transform": {
+        "p": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "children": [],
+      "components": [
+        {
+          "hash": 7481719764336608291,
+          "mdlpath": "Data/Model/nico/nico.mdl"
+        }
+      ],
+      "name": "nico",
+      "transform": {
+        "p": [
+          0.0,
+          0.5,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "s": [
+          2.0,
+          2.0,
+          2.0
+        ]
+      }
+    },
+    {
+      "children": [],
+      "components": [
+        {
+          "aspect": 1.7301161289215088,
+          "farZ": 1000.0,
+          "fovY": 0.7853981852531433,
+          "hash": 18089348015622775616,
+          "nearZ": 0.10000000149011612
+        }
+      ],
+      "name": "Camera1",
+      "transform": {
+        "p": [
+          0.0,
+          10.0,
+          20.0
+        ],
+        "r": [
+          -0.22975292801856995,
+          0.0,
+          -0.0,
+          0.9732490181922913
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "children": [],
+      "components": [
+        {
+          "aspect": 1.7777777910232544,
+          "farZ": 1000.0,
+          "fovY": 0.7853981852531433,
+          "hash": 18089348015622775616,
+          "nearZ": 0.10000000149011612
+        }
+      ],
+      "name": "Camera2",
+      "transform": {
+        "p": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "r": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "s": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    }
+  ]
+}
